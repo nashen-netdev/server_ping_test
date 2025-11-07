@@ -1,0 +1,12 @@
+# 批量 Ping 测试工具依赖包
+
+# SSH 连接
+paramiko
+
+# Excel 文件处理
+pandas
+openpyxl
+
+# 其他工具
+python-dateutil
+

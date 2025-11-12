@@ -1,12 +1,12 @@
 # 批量 Ping 测试工具依赖包
 
 # SSH 连接
-paramiko
+paramiko==4.0.0
 
 # Excel 文件处理
-pandas
-openpyxl
+pandas==2.3.3
+openpyxl==3.1.5
 
 # 其他工具
-python-dateutil
+python-dateutil==2.9.0.post0
 

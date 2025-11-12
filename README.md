@@ -41,7 +41,9 @@ server_ping_test/
 │   ├── PROJECT_STRUCTURE.md # 架构说明
 │   └── STOP_MECHANISM.md    # 停止机制说明
 ├── main.py                   # 主程序入口
-├── requirements.txt          # 依赖包列表
+├── requirements.txt          # 依赖包列表（带版本号）
+├── pyproject.toml            # 项目配置文件（Python 标准）
+├── .gitignore                # Git 忽略文件配置
 ├── CHANGELOG.md              # 版本历史
 └── README.md                 # 本文件
 ```
@@ -58,8 +60,14 @@ source .venv/bin/activate
 
 ### 2. 安装依赖
 
+**方法1：使用 pip（推荐）**
 ```bash
 pip install -r requirements.txt
+```
+
+**方法2：开发模式安装（便于修改代码）**
+```bash
+pip install -e .
 ```
 
 ### 3. 准备配置文件

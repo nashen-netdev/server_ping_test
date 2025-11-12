@@ -8,6 +8,18 @@
 - ⚡ 主动停止机制：在 `stop_test` 中主动调用所有 SSH 客户端的 `stop_ping()`
 - 🎯 避免重复操作：线程 `finally` 块不再重复调用 `stop_ping()`
 
+### 项目标准化改进
+- 📦 **添加版本锁定**：`requirements.txt` 现在包含具体版本号
+  - `paramiko==4.0.0`
+  - `pandas==2.3.3`
+  - `openpyxl==3.1.5`
+  - `python-dateutil==2.9.0.post0`
+- 📦 **添加 pyproject.toml**：符合现代 Python 项目标准
+  - 支持 `pip install -e .` 开发模式安装
+  - 包含项目元数据和依赖定义
+  - 配置开发工具（black, pytest）
+- 📚 **完善项目结构**：满足标准 Python 项目规范
+
 ### 技术改进
 **问题分析：**
 - 之前：等待线程自己检测 `self.running = False` 并退出（被动等待）

@@ -48,6 +48,20 @@ def main():
         help='测试结果输出目录 (默认: results)'
     )
     
+    parser.add_argument(
+        '-n', '--max-concurrent',
+        type=int,
+        default=None,
+        help='最大并发 SSH 连接数 (默认: 根据任务数和系统资源自动计算)'
+    )
+    
+    parser.add_argument(
+        '-i', '--interval',
+        type=float,
+        default=0.3,
+        help='连接发起间隔秒数 (默认: 0.3)'
+    )
+    
     args = parser.parse_args()
     
     # 打印欢迎信息
@@ -56,6 +70,7 @@ def main():
     print("="*80)
     print(f"配置文件: {args.config}")
     print(f"输出目录: {args.output}")
+    print(f"连接间隔: {args.interval} 秒")
     print("="*80 + "\n")
     
     try:
@@ -81,7 +96,19 @@ def main():
         print()
         
         # 创建测试管理器
-        tester = PingTester(servers, args.output)
+        tester = PingTester(
+            servers, 
+            args.output,
+            max_concurrent=args.max_concurrent,
+            connection_interval=args.interval
+        )
+        
+        # 显示实际并发配置
+        if args.max_concurrent is None:
+            print(f"并发连接: {tester.max_concurrent} (自动计算: 任务数 {total_tests}, 系统支持)")
+        else:
+            print(f"并发连接: {tester.max_concurrent} (用户指定)")
+        print()
         
         # 启动测试
         tester.start_test()

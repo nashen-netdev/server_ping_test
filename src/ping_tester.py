@@ -5,12 +5,41 @@ Ping 测试模块
 """
 
 import threading
-from datetime import datetime
-from typing import List, Dict
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional
 import os
 import time
+import resource
+import re
 from .ssh_client import SSHClient
 from .session_logger import SessionLogger
+
+
+def get_system_max_connections() -> int:
+    """
+    获取系统支持的最大连接数（基于文件描述符限制）
+    
+    Returns:
+        系统建议的最大并发连接数
+    """
+    try:
+        # 获取当前进程的文件描述符软限制
+        soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+        
+        # 每个 SSH 连接大约需要 3 个文件描述符
+        # 预留 100 个给系统和其他用途
+        available_fds = soft_limit - 100
+        max_from_fds = max(10, available_fds // 3)
+        
+        # 获取 CPU 核心数作为参考
+        cpu_count = os.cpu_count() or 4
+        max_from_cpu = cpu_count * 10  # 每核心支持 10 个连接
+        
+        # 取较小值，但设置上限 50（避免服务器端拒绝）
+        return min(max_from_fds, max_from_cpu, 50)
+    except Exception:
+        # 如果获取失败，返回保守值
+        return 20
 
 
 class PingResult:
@@ -29,9 +58,38 @@ class PingResult:
         self.consecutive_losses = 0  # 连续丢包计数
         self.log_file = log_file  # 独立的会话日志文件路径
         
+    def _extract_icmp_seq(self, line: str) -> Optional[int]:
+        """
+        从 ping 输出中提取 icmp_seq 序号
+        
+        支持格式:
+        - "64 bytes from 223.5.5.5: icmp_seq=123 ttl=117 time=20.1 ms"
+        - "no answer yet for icmp_seq=123"
+        """
+        match = re.search(r'icmp_seq[=:](\d+)', line)
+        if match:
+            return int(match.group(1))
+        return None
+    
+    def _calculate_timestamp(self, icmp_seq: Optional[int]) -> str:
+        """
+        根据 icmp_seq 计算实际的 ping 时间
+        
+        ping 每秒发送一个包，icmp_seq=1 对应测试开始时间
+        """
+        if icmp_seq is not None and icmp_seq > 0:
+            # icmp_seq=1 对应 start_time，每增加 1 就加 1 秒
+            actual_time = self.start_time + timedelta(seconds=icmp_seq - 1)
+            return actual_time.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            # 无法提取序号时使用当前时间
+            return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
     def add_output(self, line: str):
         """添加输出行"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # 尝试从 ping 输出中提取 icmp_seq，计算实际时间
+        icmp_seq = self._extract_icmp_seq(line)
+        timestamp = self._calculate_timestamp(icmp_seq)
         formatted_line = f"[{timestamp}] {line}"
         self.output_lines.append(formatted_line)
         
@@ -59,13 +117,20 @@ class PingResult:
 class PingTester:
     """Ping 测试管理器"""
     
-    def __init__(self, servers: List[Dict], output_dir: str):
+    # 默认并发配置
+    DEFAULT_CONNECTION_INTERVAL = 0.3  # 连接间隔（秒）
+    MAX_CONCURRENT_LIMIT = 50  # 并发连接数硬上限（避免服务器拒绝）
+    
+    def __init__(self, servers: List[Dict], output_dir: str, 
+                 max_concurrent: int = None, connection_interval: float = None):
         """
         初始化测试管理器
         
         Args:
             servers: 服务器配置列表
             output_dir: 输出目录
+            max_concurrent: 最大并发连接数（默认根据任务数和系统资源动态计算）
+            connection_interval: 连接间隔秒数（默认 0.3）
         """
         self.servers = servers
         self.output_dir = output_dir
@@ -74,6 +139,24 @@ class PingTester:
         self.ssh_clients = []  # 跟踪所有 SSH 客户端以便停止时主动关闭
         self.lock = threading.Lock()
         self.running = False
+        
+        # 计算总任务数
+        self.total_tasks = sum(len(server['target_ips']) for server in servers)
+        
+        # 动态计算默认并发数
+        if max_concurrent is None:
+            system_max = get_system_max_connections()
+            # 取任务数和系统支持数的较小值
+            self.max_concurrent = min(self.total_tasks, system_max, self.MAX_CONCURRENT_LIMIT)
+            # 确保至少为 1
+            self.max_concurrent = max(1, self.max_concurrent)
+        else:
+            self.max_concurrent = min(max_concurrent, self.MAX_CONCURRENT_LIMIT)
+        
+        self.connection_interval = connection_interval or self.DEFAULT_CONNECTION_INTERVAL
+        
+        # 使用信号量限制并发 SSH 连接数
+        self.connection_semaphore = threading.Semaphore(self.max_concurrent)
         
         # 为本次测试创建带时间戳的会话目录
         self.session_dir = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -93,10 +176,12 @@ class PingTester:
         
         # 计算总任务数
         total_tasks = sum(len(server['target_ips']) for server in self.servers)
-        print(f"正在启动 {total_tasks} 个并发测试任务...")
+        print(f"正在启动 {total_tasks} 个测试任务...")
+        print(f"并发限制: 最多 {self.max_concurrent} 个同时连接")
+        print(f"连接间隔: {self.connection_interval} 秒")
         print("按 Ctrl+C 可随时停止\n")
         
-        # 为每个服务器的每个目标IP创建一个线程（并发启动）
+        # 为每个服务器的每个目标IP创建一个线程
         for server in self.servers:
             for target_ip in server['target_ips']:
                 thread = threading.Thread(
@@ -107,8 +192,8 @@ class PingTester:
                 thread.start()
                 self.threads.append(thread)
                 
-                # 稍微延迟避免同时建立太多 SSH 连接
-                time.sleep(0.05)  # 从0.1秒减少到0.05秒，加快启动
+                # 连接间隔，避免同时建立太多 SSH 连接
+                time.sleep(self.connection_interval)
     
     def _run_ping_test(self, server: Dict, target_ip: str):
         """
@@ -122,76 +207,78 @@ class PingTester:
         result = None
         session_logger = None
         
-        try:
-            # 连接服务器
-            ssh_client = SSHClient(
-                host=server['ip'],
-                username=server['user'],
-                password=server['password']
-            )
-            
-            if not ssh_client.connect():
-                print(f"✗ 无法连接到服务器 {server['ip']}")
-                return
-            
-            # 将 SSH 客户端添加到列表（用于停止时统一管理）
-            with self.lock:
-                self.ssh_clients.append(ssh_client)
-            
-            hostname = ssh_client.get_hostname()
-            print(f"✓ 已连接: {server['ip']} ({hostname}) -> 开始 ping {target_ip}")
-            
-            # 创建会话日志记录器（独立的终端日志文件）
-            session_logger = SessionLogger(self.output_dir, self.session_dir, server['ip'], hostname, target_ip)
-            
-            # 创建结果记录
-            result = PingResult(server['ip'], hostname, target_ip, session_logger.get_log_file())
-            
-            with self.lock:
-                self.results.append(result)
-            
-            # 定义输出回调
-            def output_callback(line: str):
-                # 记录到内存
-                result.add_output(line)
+        # 使用信号量限制并发 SSH 连接数
+        with self.connection_semaphore:
+            try:
+                # 连接服务器（带重试机制）
+                ssh_client = SSHClient(
+                    host=server['ip'],
+                    username=server['user'],
+                    password=server['password']
+                )
                 
-                # 记录到独立的会话日志文件
-                if 'no answer yet' in line or 'timeout' in line.lower():
-                    session_logger.log_loss(line)  # 丢包用特殊标记
-                else:
-                    session_logger.log(line)  # 正常记录
+                if not ssh_client.connect():
+                    print(f"✗ 无法连接到服务器 {server['ip']}")
+                    return
                 
-                # 控制台智能显示（首次、每10次、恢复时）
-                if 'no answer yet' in line or 'timeout' in line.lower():
-                    # 首次丢包或每10次丢包显示一次
-                    if result.consecutive_losses == 1:
-                        print(f"⚠ 丢包检测: {server['ip']}({hostname}) -> {target_ip}: 开始丢包")
-                    elif result.consecutive_losses % 10 == 0:
-                        print(f"⚠ 丢包检测: {server['ip']}({hostname}) -> {target_ip}: 已连续丢包 {result.consecutive_losses} 个")
-                elif result.consecutive_losses > 0 and 'bytes from' in line:
-                    # 只有真正的 ping 响应才算恢复（避免统计信息误判）
-                    print(f"✓ 恢复正常: {server['ip']}({hostname}) -> {target_ip}: 共丢失 {result.consecutive_losses} 个包后恢复")
-            
-            # 执行 ping
-            ssh_client.execute_ping(target_ip, callback=output_callback)
-            
-        except Exception as e:
-            error_msg = f"测试出错: {server['ip']} -> {target_ip}: {str(e)}"
-            print(f"✗ {error_msg}")
-            if result:
-                result.add_output(error_msg)
-            if session_logger:
-                session_logger.log(error_msg)
-        finally:
-            # 确保结果被标记为完成
-            if result and result.end_time is None:
-                result.finish()
-            # 关闭会话日志
-            if session_logger:
-                session_logger.close()
-            # 关闭 SSH 连接（stop_ping 已在 stop_test 中统一调用）
-            if ssh_client:
-                ssh_client.close()
+                # 将 SSH 客户端添加到列表（用于停止时统一管理）
+                with self.lock:
+                    self.ssh_clients.append(ssh_client)
+                
+                hostname = ssh_client.get_hostname()
+                print(f"✓ 已连接: {server['ip']} ({hostname}) -> 开始 ping {target_ip}")
+                
+                # 创建会话日志记录器（独立的终端日志文件）
+                session_logger = SessionLogger(self.output_dir, self.session_dir, server['ip'], hostname, target_ip)
+                
+                # 创建结果记录
+                result = PingResult(server['ip'], hostname, target_ip, session_logger.get_log_file())
+                
+                with self.lock:
+                    self.results.append(result)
+                
+                # 定义输出回调
+                def output_callback(line: str):
+                    # 记录到内存
+                    result.add_output(line)
+                    
+                    # 记录到独立的会话日志文件
+                    if 'no answer yet' in line or 'timeout' in line.lower():
+                        session_logger.log_loss(line)  # 丢包用特殊标记
+                    else:
+                        session_logger.log(line)  # 正常记录
+                    
+                    # 控制台智能显示（首次、每10次、恢复时）
+                    if 'no answer yet' in line or 'timeout' in line.lower():
+                        # 首次丢包或每10次丢包显示一次
+                        if result.consecutive_losses == 1:
+                            print(f"⚠ 丢包检测: {server['ip']}({hostname}) -> {target_ip}: 开始丢包")
+                        elif result.consecutive_losses % 10 == 0:
+                            print(f"⚠ 丢包检测: {server['ip']}({hostname}) -> {target_ip}: 已连续丢包 {result.consecutive_losses} 个")
+                    elif result.consecutive_losses > 0 and 'bytes from' in line:
+                        # 只有真正的 ping 响应才算恢复（避免统计信息误判）
+                        print(f"✓ 恢复正常: {server['ip']}({hostname}) -> {target_ip}: 共丢失 {result.consecutive_losses} 个包后恢复")
+                
+                # 执行 ping
+                ssh_client.execute_ping(target_ip, callback=output_callback)
+                
+            except Exception as e:
+                error_msg = f"测试出错: {server['ip']} -> {target_ip}: {str(e)}"
+                print(f"✗ {error_msg}")
+                if result:
+                    result.add_output(error_msg)
+                if session_logger:
+                    session_logger.log(error_msg)
+            finally:
+                # 确保结果被标记为完成
+                if result and result.end_time is None:
+                    result.finish()
+                # 关闭会话日志
+                if session_logger:
+                    session_logger.close()
+                # 关闭 SSH 连接（stop_ping 已在 stop_test 中统一调用）
+                if ssh_client:
+                    ssh_client.close()
     
     def stop_test(self):
         """停止所有测试 - 主动停止所有 SSH ping 并等待线程"""

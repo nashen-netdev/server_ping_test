@@ -32,37 +32,57 @@ class SSHClient:
         self.hostname = None
         self.should_stop = False  # 停止标志
         
-    def connect(self, timeout: int = 10) -> bool:
+    def connect(self, timeout: int = 15, banner_timeout: int = 30, retries: int = 3) -> bool:
         """
-        连接到服务器
+        连接到服务器（带重试机制）
         
         Args:
             timeout: 连接超时时间（秒）
+            banner_timeout: SSH banner 读取超时时间（秒）
+            retries: 重试次数
             
         Returns:
             连接是否成功
         """
-        try:
-            self.client = paramiko.SSHClient()
-            self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            self.client.connect(
-                hostname=self.host,
-                port=self.port,
-                username=self.username,
-                password=self.password,
-                timeout=timeout,
-                look_for_keys=False,
-                allow_agent=False
-            )
-            
-            # 获取主机名
-            stdin, stdout, stderr = self.client.exec_command('hostname')
-            self.hostname = stdout.read().decode('utf-8').strip()
-            
-            return True
-        except Exception as e:
-            print(f"连接服务器 {self.host} 失败: {str(e)}")
-            return False
+        last_error = None
+        
+        for attempt in range(retries):
+            try:
+                self.client = paramiko.SSHClient()
+                self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                self.client.connect(
+                    hostname=self.host,
+                    port=self.port,
+                    username=self.username,
+                    password=self.password,
+                    timeout=timeout,
+                    banner_timeout=banner_timeout,
+                    look_for_keys=False,
+                    allow_agent=False
+                )
+                
+                # 获取主机名
+                stdin, stdout, stderr = self.client.exec_command('hostname')
+                self.hostname = stdout.read().decode('utf-8').strip()
+                
+                return True
+            except Exception as e:
+                last_error = e
+                if self.client:
+                    try:
+                        self.client.close()
+                    except:
+                        pass
+                    self.client = None
+                
+                # 如果还有重试机会，等待后重试
+                if attempt < retries - 1:
+                    wait_time = (attempt + 1) * 2  # 指数退避: 2s, 4s
+                    time.sleep(wait_time)
+        
+        # 所有重试都失败
+        print(f"连接服务器 {self.host} 失败 (已重试 {retries} 次): {str(last_error)}")
+        return False
     
     def get_hostname(self) -> str:
         """获取主机名"""

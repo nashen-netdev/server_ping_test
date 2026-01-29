@@ -13,6 +13,8 @@
 
 - ✅ 支持从 Excel 配置文件批量读取服务器和目标IP
 - ✅ 并发执行多个服务器的 ping 测试
+- ✅ **可配置的并发连接数控制**（避免连接过载）
+- ✅ **SSH 连接自动重试机制**（失败后指数退避重试）
 - ✅ 实时检测和记录丢包情况
 - ✅ 自动生成详细的测试报告
 - ✅ 支持手动停止测试（Ctrl+C）
@@ -108,6 +110,36 @@ python3 main.py -c config/servers.xlsx -o my_test_results
 
 # 4. 查看帮助
 python3 main.py --help
+```
+
+### 命令行参数
+
+| 参数 | 缩写 | 默认值 | 说明 |
+|------|------|--------|------|
+| `--config` | `-c` | 必填 | 服务器配置文件路径 (Excel格式) |
+| `--output` | `-o` | `results` | 测试结果输出目录 |
+| `--max-concurrent` | `-n` | 自动计算 | 最大并发 SSH 连接数 |
+| `--interval` | `-i` | `0.3` | 连接发起间隔秒数 |
+
+**并发数自动计算逻辑：**
+- 默认根据**任务数量**和**系统资源**动态计算
+- 取以下三者的最小值：
+  1. 总任务数（避免浪费）
+  2. 系统文件描述符限制 / 3（每个 SSH 连接约需 3 个 fd）
+  3. 硬上限 50（避免服务器端拒绝连接）
+- 例如：60 个任务，系统支持 40 个并发 → 实际使用 40 个
+
+### 高级用法示例
+
+```bash
+# 测试大量服务器时，适当降低并发数和增加间隔
+python3 main.py -c config/servers.xlsx -n 5 -i 0.5
+
+# 网络条件好时，可以增加并发数
+python3 main.py -c config/servers.xlsx -n 20 -i 0.2
+
+# 完整参数示例
+python3 main.py -c config/servers.xlsx -o my_results -n 10 -i 0.3
 ```
 
 ### 停止测试
@@ -218,7 +250,33 @@ python3 main.py --help
 4. 检查防火墙设置
 5. 查看服务器 SSH 服务状态
 
-### 问题2: 依赖安装失败
+### 问题2: 大量 "No existing session" 或 "Error reading SSH protocol banner" 错误
+**现象：** 同时测试多台服务器时，大量连接失败
+
+**原因分析：**
+- 同时发起的 SSH 连接数超过了网络或服务器的限制
+- SSH 服务器的 `MaxStartups` 参数限制了并发连接数
+- 网络设备（防火墙/负载均衡器）有连接速率限制
+
+**解决方案：**
+```bash
+# 降低并发连接数（默认 10，可改为 5）
+python3 main.py -c config/servers.xlsx -n 5
+
+# 增加连接间隔（默认 0.3 秒，可改为 0.5 秒）
+python3 main.py -c config/servers.xlsx -i 0.5
+
+# 同时调整两个参数
+python3 main.py -c config/servers.xlsx -n 5 -i 0.5
+```
+
+**服务器端优化：**（如有权限）
+```bash
+# 修改 /etc/ssh/sshd_config
+MaxStartups 30:50:100  # 提高并发连接限制
+```
+
+### 问题3: 依赖安装失败
 **现象：** pip install 报错
 
 **排查思路：**
@@ -227,7 +285,7 @@ python3 main.py --help
 3. 使用国内镜像源: `pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt`
 4. 检查网络连接
 
-### 问题3: Excel 文件读取失败
+### 问题4: Excel 文件读取失败
 **现象：** 配置文件加载错误
 
 **排查思路：**
@@ -237,7 +295,7 @@ python3 main.py --help
 4. 确保至少有一行有效数据
 5. 检查数据格式（IP地址格式等）
 
-### 问题4: 虚拟环境问题
+### 问题5: 虚拟环境问题
 **现象：** 找不到模块
 
 **解决方案：**
@@ -264,7 +322,9 @@ pip install -r requirements.txt
 - 单个 ping 测试占用资源很小
 - 100台设备同时测试内存占用约 200-500MB
 - SSH 连接建立时间约 0.5-2 秒/台
-- 建议根据网络情况调整并发数量
+- **并发连接数根据任务数和系统资源自动计算**，上限 50
+- **SSH 连接失败自动重试 3 次**，使用指数退避（2s, 4s）
+- 可通过 `-n` 参数手动指定并发数量
 
 ## 注意事项
 
@@ -284,10 +344,10 @@ pip install -r requirements.txt
 
 ## 版本信息
 
-- 版本: 1.0.0
+- 版本: 1.1.0
 - Python: 3.8+
 - 作者: sen
-- 更新日期: 2025-11-06
+- 更新日期: 2026-01-28
 
 ## 许可证
 

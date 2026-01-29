@@ -6,8 +6,13 @@ SSH 客户端模块
 
 import paramiko
 import time
+import logging
 from typing import Optional, Callable
 import threading
+
+# 抑制 paramiko 内部的错误日志（如 "Error reading SSH protocol banner"）
+# 这些错误在重试机制中会被处理，不需要打印到控制台
+logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 
 
 class SSHClient:

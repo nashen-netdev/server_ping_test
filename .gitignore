@@ -53,3 +53,5 @@ config/*_test.xlsx
 *.tmp
 *.bak
 
+openspec/
+.cursor/

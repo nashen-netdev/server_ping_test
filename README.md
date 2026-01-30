@@ -23,31 +23,36 @@
 
 ## 项目结构
 
+采用标准的 **src-layout** 结构：
+
 ```
 server_ping_test/
-├── src/                      # 源代码目录
-│   ├── config_loader.py     # 配置加载模块
-│   ├── ssh_client.py        # SSH 客户端模块
-│   ├── session_logger.py    # 会话日志记录模块
-│   └── ping_tester.py       # Ping 测试核心模块
-├── config/                   # 配置文件目录
-│   └── servers_empty.xlsx   # 配置文件（直接编辑使用）
-├── results/                  # 测试结果输出目录（自动创建）
-│   ├── sessions/            # 会话日志目录
-│   │   └── 20251106_234500/  # 每次测试创建独立目录
-│   │       ├── server1_to_target1.log
-│   │       └── server2_to_target2.log
-│   └── ping_test_report_*.txt  # 测试报告
-├── docs/                     # 文档目录
-│   ├── USAGE.md             # 使用指南
-│   ├── PROJECT_STRUCTURE.md # 架构说明
-│   └── STOP_MECHANISM.md    # 停止机制说明
-├── main.py                   # 主程序入口
-├── requirements.txt          # 依赖包列表（带版本号）
-├── pyproject.toml            # 项目配置文件（Python 标准）
-├── .gitignore                # Git 忽略文件配置
-├── CHANGELOG.md              # 版本历史
-└── README.md                 # 本文件
+├── src/                          # 源代码目录（src-layout）
+│   └── server_ping_test/        # 包目录
+│       ├── __init__.py          # 包初始化，导出主要类
+│       ├── cli.py               # 命令行接口
+│       ├── config_loader.py     # 配置加载模块
+│       ├── ssh_client.py        # SSH 客户端模块
+│       ├── session_logger.py    # 会话日志记录模块
+│       └── ping_tester.py       # Ping 测试核心模块
+├── config/                       # 配置文件目录
+│   └── servers_empty.xlsx       # 配置文件模板
+├── results/                      # 测试结果输出目录（自动创建）
+│   ├── sessions/                # 会话日志目录
+│   │   └── YYYYMMDD_HHMMSS/     # 每次测试创建独立目录
+│   └── ping_test_report_*.txt   # 测试报告
+├── tests/                        # 测试目录
+│   └── __init__.py
+├── docs/                         # 文档目录
+│   ├── USAGE.md                 # 使用指南
+│   ├── PROJECT_STRUCTURE.md     # 架构说明
+│   └── STOP_MECHANISM.md        # 停止机制说明
+├── main.py                       # 主程序入口（快捷方式）
+├── requirements.txt              # 依赖包列表
+├── pyproject.toml                # 项目配置（Python 标准）
+├── .gitignore
+├── CHANGELOG.md
+└── README.md
 ```
 
 ## 安装配置
@@ -346,8 +351,9 @@ pip install -r requirements.txt
 
 - 版本: 1.1.0
 - Python: 3.8+
+- 架构: src-layout
 - 作者: sen
-- 更新日期: 2026-01-28
+- 更新日期: 2026-01-29
 
 ## 许可证
 

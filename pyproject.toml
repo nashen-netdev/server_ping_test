@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "batch-ping-tester"
-version = "1.0.7"
+version = "1.1.0"
 description = "批量 Ping 测试工具 - 用于网络故障演练的多服务器并发 ping 测试"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -46,10 +46,10 @@ Repository = "https://github.com/yourusername/batch-ping-tester.git"
 Documentation = "https://github.com/yourusername/batch-ping-tester#readme"
 
 [project.scripts]
-batch-ping = "main:main"
+batch-ping = "server_ping_test.cli:main"
 
-[tool.setuptools]
-packages = ["src"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.package-data]
 "*" = ["*.xlsx"]
@@ -73,5 +73,5 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=src --cov-report=html --cov-report=term"
+addopts = "-v --cov=server_ping_test --cov-report=html --cov-report=term"
 

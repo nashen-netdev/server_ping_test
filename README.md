@@ -36,14 +36,8 @@ server_ping_test/
 │       ├── ssh_client.py        # SSH 客户端模块
 │       ├── session_logger.py    # 会话日志记录模块
 │       └── ping_tester.py       # Ping 测试核心模块
-├── data/                         # 数据目录（git 忽略，存放用户数据）
-│   └── servers.xlsx             # 你的服务器配置（含密码）
 ├── examples/                     # 示例目录
-│   └── servers_template.xlsx    # 配置文件模板
-├── results/                      # 测试结果输出目录（自动创建）
-│   ├── sessions/                # 会话日志目录
-│   │   └── YYYYMMDD_HHMMSS/     # 每次测试创建独立目录
-│   └── ping_test_report_*.txt   # 测试报告
+│   └── servers_template.xlsx    # 配置文件模板（可复制使用）
 ├── tests/                        # 测试目录
 │   └── __init__.py
 ├── docs/                         # 文档目录
@@ -106,21 +100,40 @@ pip install -e .
 ### 基本用法
 
 ```bash
-# 1. 激活虚拟环境并安装
-source .venv/bin/activate
+# 1. 安装工具
+cd /path/to/server_ping_test
 pip install -e .
 
-# 2. 运行测试（方式一：batch-ping 命令）
-batch-ping -c data/servers.xlsx
+# 2. 准备配置文件（复制模板到你的工作目录）
+cp examples/servers_template.xlsx ~/work/servers.xlsx
+# 编辑 ~/work/servers.xlsx 填写服务器信息
 
-# 3. 运行测试（方式二：python -m）
-python -m server_ping_test -c data/servers.xlsx
+# 3. 在工作目录运行测试（结果输出到当前目录）
+cd ~/work
+batch-ping -c servers.xlsx
+# 结果保存在: ~/work/results/
 
-# 4. 指定输出目录
-batch-ping -c config/servers.xlsx -o my_test_results
+# 4. 或者指定输出目录
+batch-ping -c servers.xlsx -o /tmp/ping_results
 
-# 5. 查看帮助
+# 5. 使用 python -m 方式运行
+python -m server_ping_test -c servers.xlsx
+
+# 6. 查看帮助
 batch-ping --help
+```
+
+### 输出说明
+
+运行后会在**当前工作目录**（或 `-o` 指定的目录）生成：
+
+```
+results/
+├── sessions/                    # 会话日志目录
+│   └── YYYYMMDD_HHMMSS/        # 每次测试的详细日志
+│       ├── server1_to_target1.log
+│       └── server2_to_target2.log
+└── ping_test_report_*.txt      # 测试报告
 ```
 
 ### 命令行参数

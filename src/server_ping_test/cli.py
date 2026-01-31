@@ -19,12 +19,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  batch-ping -c config/servers.xlsx
-  batch-ping -c config/servers.xlsx -o custom_results
-  python -m server_ping_test -c config/servers.xlsx
+  batch-ping -c servers.xlsx                    # 结果输出到当前目录的 results/
+  batch-ping -c servers.xlsx -o /tmp/output     # 指定输出目录
+  python -m server_ping_test -c servers.xlsx
   
-配置文件格式:
-  Excel 文件需要包含以下列:
+配置文件格式 (Excel):
   - ip: 服务器IP地址 (必需)
   - user: SSH用户名 (可选，默认为root)
   - pass: SSH密码 (可选)

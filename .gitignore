@@ -26,13 +26,8 @@ venv/
 ENV/
 env/
 
-# 测试结果和日志
-results/
-logs/
-*.log
-
-# 数据目录（包含敏感信息如密码）
-data/*
+# 日志文件
+*.log*
 
 # IDE
 .vscode/

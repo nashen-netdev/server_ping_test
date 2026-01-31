@@ -21,7 +21,7 @@ def main():
 使用示例:
   batch-ping -c config/servers.xlsx
   batch-ping -c config/servers.xlsx -o custom_results
-  python3 main.py -c config/servers.xlsx
+  python -m server_ping_test -c config/servers.xlsx
   
 配置文件格式:
   Excel 文件需要包含以下列:

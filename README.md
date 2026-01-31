@@ -30,13 +30,16 @@ server_ping_test/
 ├── src/                          # 源代码目录（src-layout）
 │   └── server_ping_test/        # 包目录
 │       ├── __init__.py          # 包初始化，导出主要类
+│       ├── __main__.py          # 支持 python -m 运行
 │       ├── cli.py               # 命令行接口
 │       ├── config_loader.py     # 配置加载模块
 │       ├── ssh_client.py        # SSH 客户端模块
 │       ├── session_logger.py    # 会话日志记录模块
 │       └── ping_tester.py       # Ping 测试核心模块
-├── config/                       # 配置文件目录
-│   └── servers_empty.xlsx       # 配置文件模板
+├── data/                         # 数据目录（git 忽略，存放用户数据）
+│   └── servers.xlsx             # 你的服务器配置（含密码）
+├── examples/                     # 示例目录
+│   └── servers_template.xlsx    # 配置文件模板
 ├── results/                      # 测试结果输出目录（自动创建）
 │   ├── sessions/                # 会话日志目录
 │   │   └── YYYYMMDD_HHMMSS/     # 每次测试创建独立目录
@@ -47,7 +50,6 @@ server_ping_test/
 │   ├── USAGE.md                 # 使用指南
 │   ├── PROJECT_STRUCTURE.md     # 架构说明
 │   └── STOP_MECHANISM.md        # 停止机制说明
-├── main.py                       # 主程序入口（快捷方式）
 ├── requirements.txt              # 依赖包列表
 ├── pyproject.toml                # 项目配置（Python 标准）
 ├── .gitignore
@@ -104,17 +106,21 @@ pip install -e .
 ### 基本用法
 
 ```bash
-# 1. 激活虚拟环境
+# 1. 激活虚拟环境并安装
 source .venv/bin/activate
+pip install -e .
 
-# 2. 运行测试（使用您的配置文件）
-python3 main.py -c config/servers_empty.xlsx
+# 2. 运行测试（方式一：batch-ping 命令）
+batch-ping -c data/servers.xlsx
 
-# 3. 指定输出目录
-python3 main.py -c config/servers.xlsx -o my_test_results
+# 3. 运行测试（方式二：python -m）
+python -m server_ping_test -c data/servers.xlsx
 
-# 4. 查看帮助
-python3 main.py --help
+# 4. 指定输出目录
+batch-ping -c config/servers.xlsx -o my_test_results
+
+# 5. 查看帮助
+batch-ping --help
 ```
 
 ### 命令行参数

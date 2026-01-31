@@ -110,16 +110,19 @@ cp examples/servers_template.xlsx ~/work/servers.xlsx
 
 # 3. 在工作目录运行测试（结果输出到当前目录）
 cd ~/work
-batch-ping -c servers.xlsx
+batch-ping servers.xlsx
 # 结果保存在: ~/work/results/
 
-# 4. 或者指定输出目录
-batch-ping -c servers.xlsx -o /tmp/ping_results
+# 4. 指定输出目录
+batch-ping servers.xlsx -o /tmp/ping_results
 
-# 5. 使用 python -m 方式运行
-python -m server_ping_test -c servers.xlsx
+# 5. 自定义并发数和间隔
+batch-ping servers.xlsx -n 20 -i 0.5
 
-# 6. 查看帮助
+# 6. 使用 python -m 方式运行
+python -m server_ping_test servers.xlsx
+
+# 7. 查看帮助
 batch-ping --help
 ```
 
@@ -138,12 +141,16 @@ results/
 
 ### 命令行参数
 
-| 参数 | 缩写 | 默认值 | 说明 |
+```
+batch-ping CONFIG_FILE [选项]
+```
+
+| 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `--config` | `-c` | 必填 | 服务器配置文件路径 (Excel格式) |
-| `--output` | `-o` | `results` | 测试结果输出目录 |
-| `--max-concurrent` | `-n` | 自动计算 | 最大并发 SSH 连接数 |
-| `--interval` | `-i` | `0.3` | 连接发起间隔秒数 |
+| `CONFIG_FILE` | 位置参数 | 必填 | 服务器配置文件 (Excel格式) |
+| `-o, --output` | 选项 | `results` | 测试结果输出目录 |
+| `-n, --max-concurrent` | 选项 | 自动计算 | 最大并发 SSH 连接数 |
+| `-i, --interval` | 选项 | `0.3` | 连接发起间隔秒数 |
 
 **并发数自动计算逻辑：**
 - 默认根据**任务数量**和**系统资源**动态计算
@@ -157,13 +164,13 @@ results/
 
 ```bash
 # 测试大量服务器时，适当降低并发数和增加间隔
-python3 main.py -c config/servers.xlsx -n 5 -i 0.5
+batch-ping servers.xlsx -n 5 -i 0.5
 
 # 网络条件好时，可以增加并发数
-python3 main.py -c config/servers.xlsx -n 20 -i 0.2
+batch-ping servers.xlsx -n 20 -i 0.2
 
 # 完整参数示例
-python3 main.py -c config/servers.xlsx -o my_results -n 10 -i 0.3
+batch-ping servers.xlsx -o my_results -n 10 -i 0.3
 ```
 
 ### 停止测试
@@ -284,14 +291,14 @@ python3 main.py -c config/servers.xlsx -o my_results -n 10 -i 0.3
 
 **解决方案：**
 ```bash
-# 降低并发连接数（默认 10，可改为 5）
-python3 main.py -c config/servers.xlsx -n 5
+# 降低并发连接数（默认自动计算，可改为 5）
+batch-ping servers.xlsx -n 5
 
 # 增加连接间隔（默认 0.3 秒，可改为 0.5 秒）
-python3 main.py -c config/servers.xlsx -i 0.5
+batch-ping servers.xlsx -i 0.5
 
 # 同时调整两个参数
-python3 main.py -c config/servers.xlsx -n 5 -i 0.5
+batch-ping servers.xlsx -n 5 -i 0.5
 ```
 
 **服务器端优化：**（如有权限）

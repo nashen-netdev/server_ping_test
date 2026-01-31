@@ -19,9 +19,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  batch-ping -c servers.xlsx                    # 结果输出到当前目录的 results/
-  batch-ping -c servers.xlsx -o /tmp/output     # 指定输出目录
-  python -m server_ping_test -c servers.xlsx
+  batch-ping servers.xlsx                       # 结果输出到当前目录的 results/
+  batch-ping servers.xlsx -o /tmp/output        # 指定输出目录
+  batch-ping servers.xlsx -n 20 -i 0.5          # 自定义并发和间隔
+  python -m server_ping_test servers.xlsx
   
 配置文件格式 (Excel):
   - ip: 服务器IP地址 (必需)
@@ -32,9 +33,9 @@ def main():
     )
     
     parser.add_argument(
-        '-c', '--config',
-        required=True,
-        help='服务器配置文件路径 (Excel格式)'
+        'config',
+        metavar='CONFIG_FILE',
+        help='服务器配置文件 (Excel格式)'
     )
     
     parser.add_argument(

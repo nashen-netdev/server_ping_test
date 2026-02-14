@@ -22,7 +22,7 @@ from .config_loader import ConfigLoader
 from .ping_tester import PingTester, PingResult
 from .ssh_client import SSHClient
 from .session_logger import SessionLogger
-from .pdf_report import PDFReportGenerator
+from .pdf_report import generate_pdf_from_text
 
 __all__ = [
     "ConfigLoader",
@@ -30,6 +30,6 @@ __all__ = [
     "PingResult",
     "SSHClient",
     "SessionLogger",
-    "PDFReportGenerator",
+    "generate_pdf_from_text",
 ]
 

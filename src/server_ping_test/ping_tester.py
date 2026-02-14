@@ -349,128 +349,145 @@ class PingTester:
         Returns:
             报告文件路径
         """
+        # 统一生成报告文本内容（PDF 和 TXT 内容完全一致）
+        report_text = self._build_report_text()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
         if report_format == 'pdf':
-            return self._generate_pdf_report(pdf_password)
+            return self._generate_pdf_report(report_text, timestamp, pdf_password)
         else:
-            return self._generate_txt_report()
+            return self._generate_txt_report(report_text, timestamp)
     
-    def _generate_pdf_report(self, pdf_password: str = None) -> str:
+    def _build_report_text(self) -> str:
         """
-        生成 PDF 格式报告（加密保护，禁止修改）
+        构建报告文本内容（PDF 和 TXT 共用同一份内容）
+        
+        Returns:
+            完整的报告文本字符串
+        """
+        lines = []
+        
+        # 报告头
+        lines.append("=" * 80)
+        lines.append("批量 Ping 测试报告")
+        lines.append("=" * 80)
+        lines.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"测试服务器数量: {len(self.servers)} 台")
+        lines.append(f"测试连接总数: {len(self.results)} 对")
+        lines.append("")
+        
+        # 统计信息
+        total_connections = len(self.results)
+        connections_with_loss = sum(1 for r in self.results if r.lost_packets > 0)
+        connections_without_loss = total_connections - connections_with_loss
+        
+        lines.append("=" * 80)
+        lines.append("测试统计")
+        lines.append("=" * 80)
+        lines.append(f"总连接数: {total_connections}")
+        lines.append(f"无丢包连接: {connections_without_loss} ({connections_without_loss/total_connections*100:.2f}%)")
+        lines.append(f"有丢包连接: {connections_with_loss} ({connections_with_loss/total_connections*100:.2f}%)")
+        lines.append("")
+        
+        # 丢包摘要
+        if connections_with_loss > 0:
+            lines.append("=" * 80)
+            lines.append("丢包情况摘要 ⚠")
+            lines.append("=" * 80)
+            for result in self.results:
+                if result.lost_packets > 0:
+                    lines.append("")
+                    lines.append(f"服务器: {result.server_ip} ({result.server_hostname})")
+                    lines.append(f"目标IP: {result.target_ip}")
+                    lines.append(f"总包数: {result.total_packets}, 丢包数: {result.lost_packets}, 丢包率: {result.get_loss_rate():.2f}%")
+                    if result.end_time:
+                        lines.append(f"测试时长: {(result.end_time - result.start_time).total_seconds():.1f} 秒")
+                    else:
+                        lines.append("测试时长: 未完成")
+                    lines.append("")
+                    lines.append("丢包详情:")
+                    for line in result.packet_loss_lines:
+                        lines.append(f"  {line}")
+                    lines.append("")
+                    lines.append("-" * 80)
+            lines.append("")
+        
+        # 详细测试结果
+        lines.append("=" * 80)
+        lines.append("详细测试结果")
+        lines.append("=" * 80)
+        
+        for idx, result in enumerate(self.results, 1):
+            lines.append("")
+            lines.append(f"[测试 {idx}/{len(self.results)}]")
+            lines.append(f"服务器: {result.server_ip} ({result.server_hostname})")
+            lines.append(f"目标IP: {result.target_ip}")
+            lines.append(f"开始时间: {result.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            end_time_str = result.end_time.strftime('%Y-%m-%d %H:%M:%S') if result.end_time else '未完成'
+            lines.append(f"结束时间: {end_time_str}")
+            if result.end_time:
+                lines.append(f"测试时长: {(result.end_time - result.start_time).total_seconds():.1f} 秒")
+            else:
+                lines.append("测试时长: 未完成")
+            lines.append(f"总包数: {result.total_packets}, 丢包数: {result.lost_packets}, 丢包率: {result.get_loss_rate():.2f}%")
+            
+            if result.lost_packets > 0:
+                lines.append("")
+                lines.append(f"⚠️ 警告: 检测到丢包 {result.lost_packets}/{result.total_packets} 个 ({result.get_loss_rate():.2f}%)")
+            
+            if result.log_file:
+                lines.append("")
+                lines.append(f"完整会话日志: {result.log_file}")
+            
+            lines.append("")
+            lines.append("Ping 输出摘要（最近 50 行）:")
+            lines.append("-" * 80)
+            
+            if result.output_lines:
+                output_to_show = result.output_lines[-50:] if len(result.output_lines) > 50 else result.output_lines
+                if len(result.output_lines) > 50:
+                    lines.append(f"... (省略前 {len(result.output_lines) - 50} 行，查看完整输出请查看会话日志文件) ...")
+                    lines.append("")
+                for line in output_to_show:
+                    lines.append(line)
+            else:
+                lines.append("(无输出记录)")
+            
+            lines.append("-" * 80)
+        
+        return "\n".join(lines) + "\n"
+    
+    def _generate_pdf_report(self, report_text: str, timestamp: str, pdf_password: str = None) -> str:
+        """
+        生成 PDF 格式报告（内容与 TXT 完全一致，加密保护禁止修改）
         
         Args:
+            report_text: 报告文本内容
+            timestamp: 时间戳字符串
             pdf_password: PDF 所有者密码
         
         Returns:
             PDF 报告文件路径
         """
-        from .pdf_report import PDFReportGenerator
+        from .pdf_report import generate_pdf_from_text
         
-        kwargs = {
-            'results': self.results,
-            'servers': self.servers,
-            'output_dir': self.output_dir,
-            'session_dir': self.session_dir,
-        }
-        if pdf_password:
-            kwargs['owner_password'] = pdf_password
-        
-        generator = PDFReportGenerator(**kwargs)
-        return generator.generate()
+        report_file = os.path.join(self.output_dir, f"ping_test_report_{timestamp}.pdf")
+        generate_pdf_from_text(report_text, report_file, owner_password=pdf_password)
+        return report_file
     
-    def _generate_txt_report(self) -> str:
+    def _generate_txt_report(self, report_text: str, timestamp: str) -> str:
         """
-        生成 TXT 格式报告（传统纯文本格式）
+        生成 TXT 格式报告
+        
+        Args:
+            report_text: 报告文本内容
+            timestamp: 时间戳字符串
         
         Returns:
             TXT 报告文件路径
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_file = os.path.join(self.output_dir, f"ping_test_report_{timestamp}.txt")
-        
         with open(report_file, 'w', encoding='utf-8') as f:
-            # 写入报告头
-            f.write("="*80 + "\n")
-            f.write("批量 Ping 测试报告\n")
-            f.write("="*80 + "\n")
-            f.write(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"测试服务器数量: {len(self.servers)} 台\n")
-            f.write(f"测试连接总数: {len(self.results)} 对\n")
-            f.write("\n")
-            
-            # 统计信息
-            total_connections = len(self.results)
-            connections_with_loss = sum(1 for r in self.results if r.lost_packets > 0)
-            connections_without_loss = total_connections - connections_with_loss
-            
-            f.write("="*80 + "\n")
-            f.write("测试统计\n")
-            f.write("="*80 + "\n")
-            f.write(f"总连接数: {total_connections}\n")
-            f.write(f"无丢包连接: {connections_without_loss} ({connections_without_loss/total_connections*100:.2f}%)\n")
-            f.write(f"有丢包连接: {connections_with_loss} ({connections_with_loss/total_connections*100:.2f}%)\n")
-            f.write("\n")
-            
-            # 如果有丢包，先显示丢包摘要
-            if connections_with_loss > 0:
-                f.write("="*80 + "\n")
-                f.write("丢包情况摘要 ⚠\n")
-                f.write("="*80 + "\n")
-                for result in self.results:
-                    if result.lost_packets > 0:
-                        f.write(f"\n服务器: {result.server_ip} ({result.server_hostname})\n")
-                        f.write(f"目标IP: {result.target_ip}\n")
-                        f.write(f"总包数: {result.total_packets}, 丢包数: {result.lost_packets}, 丢包率: {result.get_loss_rate():.2f}%\n")
-                        if result.end_time:
-                            f.write(f"测试时长: {(result.end_time - result.start_time).total_seconds():.1f} 秒\n")
-                        else:
-                            f.write(f"测试时长: 未完成\n")
-                        f.write("\n丢包详情:\n")
-                        for line in result.packet_loss_lines:
-                            f.write(f"  {line}\n")
-                        f.write("\n" + "-"*80 + "\n")
-                f.write("\n")
-            
-            # 详细测试结果
-            f.write("="*80 + "\n")
-            f.write("详细测试结果\n")
-            f.write("="*80 + "\n")
-            
-            for idx, result in enumerate(self.results, 1):
-                f.write(f"\n[测试 {idx}/{len(self.results)}]\n")
-                f.write(f"服务器: {result.server_ip} ({result.server_hostname})\n")
-                f.write(f"目标IP: {result.target_ip}\n")
-                f.write(f"开始时间: {result.start_time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-                end_time_str = result.end_time.strftime('%Y-%m-%d %H:%M:%S') if result.end_time else '未完成'
-                f.write(f"结束时间: {end_time_str}\n")
-                if result.end_time:
-                    f.write(f"测试时长: {(result.end_time - result.start_time).total_seconds():.1f} 秒\n")
-                else:
-                    f.write(f"测试时长: 未完成\n")
-                f.write(f"总包数: {result.total_packets}, 丢包数: {result.lost_packets}, 丢包率: {result.get_loss_rate():.2f}%\n")
-                
-                # 如果有丢包，标记提示
-                if result.lost_packets > 0:
-                    f.write(f"\n⚠️ 警告: 检测到丢包 {result.lost_packets}/{result.total_packets} 个 ({result.get_loss_rate():.2f}%)\n")
-                
-                # 会话日志文件路径
-                if result.log_file:
-                    f.write(f"\n完整会话日志: {result.log_file}\n")
-                
-                f.write("\nPing 输出摘要（最近 50 行）:\n")
-                f.write("-"*80 + "\n")
-                
-                # 只输出最近的 50 行（避免报告过大）
-                if result.output_lines:
-                    output_to_show = result.output_lines[-50:] if len(result.output_lines) > 50 else result.output_lines
-                    if len(result.output_lines) > 50:
-                        f.write(f"... (省略前 {len(result.output_lines) - 50} 行，查看完整输出请查看会话日志文件) ...\n\n")
-                    for line in output_to_show:
-                        f.write(f"{line}\n")
-                else:
-                    f.write("(无输出记录)\n")
-                
-                f.write("-"*80 + "\n")
-        
+            f.write(report_text)
         return report_file
 

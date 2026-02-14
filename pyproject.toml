@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "batch-ping-tester"
-version = "1.1.0"
+version = "1.2.0"
 description = "批量 Ping 测试工具 - 用于网络故障演练的多服务器并发 ping 测试"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -29,6 +29,7 @@ dependencies = [
     "paramiko==4.0.0",
     "pandas==2.3.3",
     "openpyxl==3.1.5",
+    "reportlab>=4.0.0",
     "python-dateutil==2.9.0.post0",
 ]
 

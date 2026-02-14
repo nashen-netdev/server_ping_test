@@ -16,7 +16,8 @@
 - ✅ **可配置的并发连接数控制**（避免连接过载）
 - ✅ **SSH 连接自动重试机制**（失败后指数退避重试）
 - ✅ 实时检测和记录丢包情况
-- ✅ 自动生成详细的测试报告
+- ✅ 自动生成详细的测试报告（支持 PDF / TXT 格式）
+- ✅ **PDF 报告加密保护**（可查看/打印，禁止修改/复制）
 - ✅ 支持手动停止测试（Ctrl+C）
 - ✅ 记录完整的 ping 输出信息
 - ✅ 统计丢包率和测试时长
@@ -35,7 +36,8 @@ server_ping_test/
 │       ├── config_loader.py     # 配置加载模块
 │       ├── ssh_client.py        # SSH 客户端模块
 │       ├── session_logger.py    # 会话日志记录模块
-│       └── ping_tester.py       # Ping 测试核心模块
+│       ├── ping_tester.py       # Ping 测试核心模块
+│       └── pdf_report.py        # PDF 报告生成模块（加密保护）
 ├── examples/                     # 示例目录
 │   └── servers_template.xlsx    # 配置文件模板（可复制使用）
 ├── tests/                        # 测试目录
@@ -108,7 +110,7 @@ pip install -e .
 cp examples/servers_template.xlsx ~/work/servers.xlsx
 # 编辑 ~/work/servers.xlsx 填写服务器信息
 
-# 3. 在工作目录运行测试（结果输出到当前目录）
+# 3. 在工作目录运行测试（默认生成 PDF 报告，加密保护不可修改）
 cd ~/work
 batch-ping servers.xlsx
 # 结果保存在: ~/work/results/
@@ -119,10 +121,16 @@ batch-ping servers.xlsx -o /tmp/ping_results
 # 5. 自定义并发数和间隔
 batch-ping servers.xlsx -n 20 -i 0.5
 
-# 6. 使用 python -m 方式运行
+# 6. 生成传统 TXT 格式报告
+batch-ping servers.xlsx -f txt
+
+# 7. 自定义 PDF 编辑密码
+batch-ping servers.xlsx --pdf-password MySecretPass
+
+# 8. 使用 python -m 方式运行
 python -m server_ping_test servers.xlsx
 
-# 7. 查看帮助
+# 9. 查看帮助
 batch-ping --help
 ```
 
@@ -136,8 +144,10 @@ results/
 │   └── YYYYMMDD_HHMMSS/        # 每次测试的详细日志
 │       ├── server1_to_target1.log
 │       └── server2_to_target2.log
-└── ping_test_report_*.txt      # 测试报告
+└── ping_test_report_*.pdf      # 测试报告（默认 PDF 格式，加密保护）
 ```
+
+> **PDF 格式说明：** 默认生成的 PDF 报告使用 128 位加密，无需密码即可打开查看和打印，但**禁止修改、复制文本和添加注释**。使用 `-f txt` 可切换为传统纯文本格式。
 
 ### 命令行参数
 
@@ -151,6 +161,8 @@ batch-ping CONFIG_FILE [选项]
 | `-o, --output` | 选项 | `results` | 测试结果输出目录 |
 | `-n, --max-concurrent` | 选项 | 自动计算 | 最大并发 SSH 连接数 |
 | `-i, --interval` | 选项 | `0.3` | 连接发起间隔秒数 |
+| `-f, --format` | 选项 | `pdf` | 报告格式：`pdf`（加密保护）或 `txt`（纯文本） |
+| `--pdf-password` | 选项 | 内置密码 | PDF 所有者密码（控制编辑权限） |
 
 **并发数自动计算逻辑：**
 - 默认根据**任务数量**和**系统资源**动态计算
@@ -171,6 +183,12 @@ batch-ping servers.xlsx -n 20 -i 0.2
 
 # 完整参数示例
 batch-ping servers.xlsx -o my_results -n 10 -i 0.3
+
+# 生成 PDF 报告并指定编辑密码
+batch-ping servers.xlsx --pdf-password MyAdminPass
+
+# 生成传统 TXT 报告（兼容旧流程）
+batch-ping servers.xlsx -f txt -o my_results
 ```
 
 ### 停止测试
@@ -182,19 +200,32 @@ batch-ping servers.xlsx -o my_results -n 10 -i 0.3
 ### 输出结构
 
 每次测试会生成：
-1. **测试报告**：`results/ping_test_report_YYYYMMDD_HHMMSS.txt`
+1. **测试报告**：`results/ping_test_report_YYYYMMDD_HHMMSS.pdf`（默认 PDF 格式）
 2. **会话日志目录**：`results/sessions/YYYYMMDD_HHMMSS/`
    - 每个连接一个独立的日志文件
    - 文件名格式：`server_ip_to_target_ip.log`
+
+### PDF 报告安全特性
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 打开查看 | ✅ 无需密码 | 任何 PDF 阅读器直接打开 |
+| 打印 | ✅ 允许 | 可正常打印纸质报告 |
+| 修改内容 | ❌ 禁止 | 需要 owner 密码才能编辑 |
+| 复制文本 | ❌ 禁止 | 防止内容被复制篡改 |
+| 添加注释 | ❌ 禁止 | 防止报告被添加额外标注 |
+| 加密强度 | 128 位 | 标准 PDF 加密 |
+
+> **适用场景：** 报告可以发送到任何地方（邮件、IM、共享盘），接收方无需密码即可查看和打印，但无法修改报告内容，确保测试结果的真实性。
 
 ### 报告内容
 
 #### 1. 测试统计
 - 总连接数
-- 无丢包连接数量和比例
-- 有丢包连接数量和比例
+- 无丢包连接数量和比例（绿色高亮）
+- 有丢包连接数量和比例（红色高亮）
 
-#### 2. 丢包情况摘要 ⚠
+#### 2. 丢包情况摘要
 如果检测到丢包，会单独列出：
 - 服务器信息（IP + 主机名）
 - 目标IP
@@ -346,6 +377,7 @@ pip install -r requirements.txt
 - **paramiko**: SSH 连接库，用于远程执行命令
 - **pandas**: 数据处理库，用于读取 Excel 配置
 - **openpyxl**: Excel 文件处理引擎
+- **reportlab**: PDF 生成库，支持加密和权限控制（中文 CID 字体内置）
 - **python-dateutil**: 日期时间处理工具
 
 ## 性能说明
@@ -372,14 +404,15 @@ pip install -r requirements.txt
 - [ ] 导出 JSON/CSV 格式报告
 - [ ] 添加邮件/企业微信告警
 - [ ] 支持配置文件加密
+- [x] PDF 加密报告输出（已完成 v1.2.0）
 
 ## 版本信息
 
-- 版本: 1.1.0
+- 版本: 1.2.0
 - Python: 3.8+
 - 架构: src-layout
 - 作者: sen
-- 更新日期: 2026-01-29
+- 更新日期: 2026-02-09
 
 ## 许可证
 

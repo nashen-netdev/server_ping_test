@@ -7,6 +7,9 @@ paramiko==4.0.0
 pandas==2.3.3
 openpyxl==3.1.5
 
+# PDF 报告生成（加密保护 + 中文支持）
+reportlab==4.4.9
+
 # 其他工具
 python-dateutil==2.9.0.post0
 

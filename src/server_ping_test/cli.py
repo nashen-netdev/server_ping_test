@@ -19,9 +19,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  batch-ping servers.xlsx                       # 结果输出到当前目录的 results/
+  batch-ping servers.xlsx                       # 默认生成 PDF 报告（加密保护）
+  batch-ping servers.xlsx -f txt                # 生成传统 TXT 报告
   batch-ping servers.xlsx -o /tmp/output        # 指定输出目录
   batch-ping servers.xlsx -n 20 -i 0.5          # 自定义并发和间隔
+  batch-ping servers.xlsx --pdf-password MyPass  # 自定义 PDF 编辑密码
   python -m server_ping_test servers.xlsx
   
 配置文件格式 (Excel):
@@ -58,6 +60,19 @@ def main():
         help='连接发起间隔秒数 (默认: 0.3)'
     )
     
+    parser.add_argument(
+        '-f', '--format',
+        choices=['pdf', 'txt'],
+        default='pdf',
+        help='报告输出格式 (默认: pdf，受密码保护不可修改)'
+    )
+    
+    parser.add_argument(
+        '--pdf-password',
+        default=None,
+        help='PDF 所有者密码（用于控制编辑权限，默认使用内置密码）'
+    )
+    
     args = parser.parse_args()
     
     # 打印欢迎信息
@@ -67,6 +82,8 @@ def main():
     print(f"配置文件: {args.config}")
     print(f"输出目录: {args.output}")
     print(f"连接间隔: {args.interval} 秒")
+    fmt_desc = "PDF（加密保护，禁止修改）" if args.format == 'pdf' else "TXT（纯文本）"
+    print(f"报告格式: {fmt_desc}")
     print("="*80 + "\n")
     
     try:
@@ -117,8 +134,12 @@ def main():
             tester.stop_test()
         
         # 生成报告（无论是正常结束还是中断都要生成）
-        print("\n正在生成测试报告...")
-        report_file = tester.generate_report()
+        fmt_hint = "PDF" if args.format == 'pdf' else "TXT"
+        print(f"\n正在生成 {fmt_hint} 测试报告...")
+        report_file = tester.generate_report(
+            report_format=args.format,
+            pdf_password=args.pdf_password,
+        )
         
         print("\n" + "="*80)
         print("测试完成")

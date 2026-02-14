@@ -338,12 +338,52 @@ class PingTester:
         for thread in self.threads:
             thread.join()
     
-    def generate_report(self) -> str:
+    def generate_report(self, report_format: str = 'pdf', pdf_password: str = None) -> str:
         """
         生成测试报告
         
+        Args:
+            report_format: 报告格式 ('pdf' 或 'txt')
+            pdf_password: PDF 所有者密码（仅 PDF 格式有效，默认使用内置密码）
+        
         Returns:
             报告文件路径
+        """
+        if report_format == 'pdf':
+            return self._generate_pdf_report(pdf_password)
+        else:
+            return self._generate_txt_report()
+    
+    def _generate_pdf_report(self, pdf_password: str = None) -> str:
+        """
+        生成 PDF 格式报告（加密保护，禁止修改）
+        
+        Args:
+            pdf_password: PDF 所有者密码
+        
+        Returns:
+            PDF 报告文件路径
+        """
+        from .pdf_report import PDFReportGenerator
+        
+        kwargs = {
+            'results': self.results,
+            'servers': self.servers,
+            'output_dir': self.output_dir,
+            'session_dir': self.session_dir,
+        }
+        if pdf_password:
+            kwargs['owner_password'] = pdf_password
+        
+        generator = PDFReportGenerator(**kwargs)
+        return generator.generate()
+    
+    def _generate_txt_report(self) -> str:
+        """
+        生成 TXT 格式报告（传统纯文本格式）
+        
+        Returns:
+            TXT 报告文件路径
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_file = os.path.join(self.output_dir, f"ping_test_report_{timestamp}.txt")

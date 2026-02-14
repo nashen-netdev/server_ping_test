@@ -15,13 +15,14 @@
     tester.start_test()
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __author__ = "sen"
 
 from .config_loader import ConfigLoader
 from .ping_tester import PingTester, PingResult
 from .ssh_client import SSHClient
 from .session_logger import SessionLogger
+from .pdf_report import PDFReportGenerator
 
 __all__ = [
     "ConfigLoader",
@@ -29,5 +30,6 @@ __all__ = [
     "PingResult",
     "SSHClient",
     "SessionLogger",
+    "PDFReportGenerator",
 ]
 

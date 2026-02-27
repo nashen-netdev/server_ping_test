@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-批量 Ping 测试工具 (server_ping_test)
+Ping Mesh - 网格化网络可达性测试工具
 用于网络故障演练的批量 ping 测试和结果记录
 
 使用方式:
-    from server_ping_test import ConfigLoader, PingTester
+    from ping_mesh import ConfigLoader, PingTester
     
     # 加载配置
     loader = ConfigLoader("config/servers.xlsx")

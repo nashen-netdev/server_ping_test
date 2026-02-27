@@ -21,7 +21,7 @@
 
 ```bash
 # 克隆项目并进入目录
-git clone <repository-url> && cd server_ping_test
+git clone https://github.com/nashen-netdev/ping-mesh.git && cd ping-mesh
 
 # 创建虚拟环境并安装依赖
 python3 -m venv .venv && source .venv/bin/activate
@@ -61,8 +61,8 @@ ping-mesh --help
 ## 项目结构
 
 ```
-server_ping_test/
-├── src/server_ping_test/    # 源代码（src-layout）
+ping-mesh/
+├── src/ping_mesh/           # 源代码（src-layout）
 ├── examples/                 # 配置文件模板
 ├── tests/                    # 测试目录
 ├── docs/                     # 详细文档

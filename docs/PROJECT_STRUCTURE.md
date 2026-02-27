@@ -5,9 +5,9 @@
 采用标准的 **src-layout** 结构：
 
 ```
-server_ping_test/
+ping-mesh/
 ├── src/                          # 源代码目录（src-layout）
-│   └── server_ping_test/        # 包目录
+│   └── ping_mesh/               # 包目录
 │       ├── __init__.py          # 包初始化，导出主要类
 │       ├── __main__.py          # 支持 python -m 运行
 │       ├── cli.py               # 命令行接口

@@ -42,12 +42,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/ping-mesh"
-Repository = "https://github.com/yourusername/ping-mesh.git"
-Documentation = "https://github.com/yourusername/ping-mesh#readme"
+Homepage = "https://github.com/nashen-netdev/ping-mesh"
+Repository = "https://github.com/nashen-netdev/ping-mesh.git"
+Documentation = "https://github.com/nashen-netdev/ping-mesh#readme"
 
 [project.scripts]
-ping-mesh = "server_ping_test.cli:main"
+ping-mesh = "ping_mesh.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -74,5 +74,5 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=server_ping_test --cov-report=html --cov-report=term"
+addopts = "-v --cov=ping_mesh --cov-report=html --cov-report=term"
 

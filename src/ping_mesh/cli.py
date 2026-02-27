@@ -70,7 +70,7 @@ def main():
   ping-mesh servers.xlsx -o /tmp/output        # 指定输出目录
   ping-mesh servers.xlsx -n 20 -i 0.5          # 自定义并发和间隔
   ping-mesh servers.xlsx --pdf-password MyPass # 自定义 PDF 编辑密码
-  python -m server_ping_test servers.xlsx
+  python -m ping_mesh servers.xlsx
   
 配置文件格式 (Excel):
   - ip: 服务器IP地址 (必需)

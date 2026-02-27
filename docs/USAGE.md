@@ -77,7 +77,7 @@ ping-mesh servers.xlsx -n 5 -i 0.5
 ping-mesh servers.xlsx -f txt
 
 # 使用 python -m 方式运行
-python -m server_ping_test servers.xlsx
+python -m ping_mesh servers.xlsx
 ```
 
 ## 输出说明

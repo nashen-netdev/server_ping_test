@@ -6,14 +6,60 @@
 
 import sys
 import os
+import signal
 import argparse
 
 from .config_loader import ConfigLoader
 from .ping_tester import PingTester
 
+# 全局引用，供信号处理器使用
+_tester: PingTester = None
+_interrupted = False
+
+
+def _signal_handler(signum, frame):
+    """统一的信号处理器（SIGINT / SIGTERM）"""
+    global _interrupted
+    
+    sig_name = signal.Signals(signum).name
+    
+    if _interrupted:
+        print(f"\n再次收到 {sig_name}，强制退出...")
+        sys.exit(128 + signum)
+    
+    _interrupted = True
+    print(f"\n\n收到 {sig_name} 信号，正在优雅停止...")
+    
+    if _tester is not None:
+        _tester.stop_test()
+
+
+def _print_summary(tester: PingTester, was_interrupted: bool):
+    """打印测试结果摘要"""
+    summary = tester.get_summary()
+    
+    print("\n" + "=" * 80)
+    if was_interrupted:
+        print("测试被用户中断 (已保存已完成的数据)")
+    elif summary['all_failed']:
+        print("测试结束 — 所有连接均失败")
+    else:
+        print("测试完成")
+    print("=" * 80)
+    
+    print(f"  服务器总数:   {summary['total_servers']} 台")
+    print(f"  计划任务数:   {summary['total_tasks']} 个")
+    print(f"  成功连接:     {summary['successful_connections']} 个")
+    print(f"  连接失败:     {summary['failed_connections']} 个")
+    if summary['successful_connections'] > 0:
+        print(f"  检测到丢包:   {summary['connections_with_loss']} 个连接")
+    print("=" * 80)
+
 
 def main():
     """主函数 - 命令行入口"""
+    global _tester
+    
     parser = argparse.ArgumentParser(
         description='批量 Ping 测试工具 - 用于网络故障演练',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -75,6 +121,10 @@ def main():
     
     args = parser.parse_args()
     
+    # 注册信号处理器
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+    
     # 打印欢迎信息
     print("\n" + "="*80)
     print("批量 Ping 测试工具".center(80))
@@ -115,6 +165,7 @@ def main():
             max_concurrent=args.max_concurrent,
             connection_interval=args.interval
         )
+        _tester = tester
         
         # 显示实际并发配置
         if args.max_concurrent is None:
@@ -126,28 +177,39 @@ def main():
         # 启动测试
         tester.start_test()
         
-        # 等待用户停止或测试完成
-        try:
-            tester.wait_for_completion()
-        except KeyboardInterrupt:
-            print("\n\n收到用户中断信号，正在停止...")
-            tester.stop_test()
+        # 等待测试完成（信号处理器会自动调用 stop_test）
+        tester.wait_for_completion()
         
-        # 生成报告（无论是正常结束还是中断都要生成）
+        # 打印结果摘要
+        _print_summary(tester, was_interrupted=_interrupted)
+        
+        # 生成报告
         fmt_hint = "PDF" if args.format == 'pdf' else "TXT"
-        print(f"\n正在生成 {fmt_hint} 测试报告...")
-        report_file = tester.generate_report(
-            report_format=args.format,
-            pdf_password=args.pdf_password,
-        )
+        if tester.has_results():
+            print(f"\n正在生成 {fmt_hint} 测试报告...")
+            report_file = tester.generate_report(
+                report_format=args.format,
+                pdf_password=args.pdf_password,
+            )
+            print(f"测试报告已保存: {report_file}")
+            print(f"会话日志目录: {os.path.join(args.output, 'sessions', tester.session_dir)}/")
+        else:
+            print(f"\n所有服务器均连接失败，仍生成 {fmt_hint} 报告记录本次测试...")
+            report_file = tester.generate_report(
+                report_format=args.format,
+                pdf_password=args.pdf_password,
+            )
+            print(f"测试报告已保存: {report_file}")
         
-        print("\n" + "="*80)
-        print("测试完成")
-        print("="*80)
-        print(f"测试报告已保存: {report_file}")
-        print(f"会话日志目录: {os.path.join(args.output, 'sessions', tester.session_dir)}/")
         print(f"输出目录: {args.output}")
-        print("="*80 + "\n")
+        print("=" * 80 + "\n")
+        
+        if _interrupted:
+            return 130  # 标准 SIGINT 退出码
+        
+        summary = tester.get_summary()
+        if summary['all_failed']:
+            return 2  # 区分"全部失败"和"正常完成"
         
         return 0
         
@@ -159,6 +221,8 @@ def main():
         import traceback
         traceback.print_exc()
         return 1
+    finally:
+        _tester = None
 
 
 if __name__ == "__main__":

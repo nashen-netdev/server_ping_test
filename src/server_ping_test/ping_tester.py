@@ -334,9 +334,38 @@ class PingTester:
         print("所有测试已停止\n")
     
     def wait_for_completion(self):
-        """等待所有测试完成"""
+        """等待所有测试完成（支持被信号中断后快速返回）"""
         for thread in self.threads:
-            thread.join()
+            while thread.is_alive():
+                thread.join(timeout=0.5)
+                if not self.running:
+                    return
+    
+    def has_results(self) -> bool:
+        """检查是否有任何有效的测试结果"""
+        return len(self.results) > 0
+    
+    def get_summary(self) -> Dict:
+        """
+        获取测试结果摘要
+        
+        Returns:
+            包含统计数据的字典
+        """
+        total_servers = len(self.servers)
+        total_tasks = self.total_tasks
+        successful_connections = len(self.results)
+        failed_connections = total_tasks - successful_connections
+        connections_with_loss = sum(1 for r in self.results if r.lost_packets > 0)
+        
+        return {
+            'total_servers': total_servers,
+            'total_tasks': total_tasks,
+            'successful_connections': successful_connections,
+            'failed_connections': failed_connections,
+            'connections_with_loss': connections_with_loss,
+            'all_failed': successful_connections == 0,
+        }
     
     def generate_report(self, report_format: str = 'pdf', pdf_password: str = None) -> str:
         """
@@ -385,8 +414,15 @@ class PingTester:
         lines.append("测试统计")
         lines.append("=" * 80)
         lines.append(f"总连接数: {total_connections}")
-        lines.append(f"无丢包连接: {connections_without_loss} ({connections_without_loss/total_connections*100:.2f}%)")
-        lines.append(f"有丢包连接: {connections_with_loss} ({connections_with_loss/total_connections*100:.2f}%)")
+        
+        if total_connections > 0:
+            lines.append(f"无丢包连接: {connections_without_loss} ({connections_without_loss/total_connections*100:.2f}%)")
+            lines.append(f"有丢包连接: {connections_with_loss} ({connections_with_loss/total_connections*100:.2f}%)")
+        else:
+            failed_count = len(self.servers)
+            lines.append(f"无丢包连接: 0 (N/A)")
+            lines.append(f"有丢包连接: 0 (N/A)")
+            lines.append(f"连接失败: {failed_count} 台服务器全部连接失败，未产生任何 ping 数据")
         lines.append("")
         
         # 丢包摘要

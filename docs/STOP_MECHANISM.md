@@ -3,7 +3,7 @@
 ## 问题背景
 
 用户提出的重要问题：
-> "ping 是怎么停止的，直接关闭ssh不停止ping也不好吧？我们手动ping的话一般想停止了就是Ctrl+C 停再退出ssh"
+> "ping 是怎么停止的，直接关闭 SSH 不停止 ping 也不好吧？我们手动 ping 的话一般想停止了就是 Ctrl+C 停再退出 SSH"
 
 这个问题非常专业！确实应该**先停止 ping，再关闭连接**，而不是直接关闭 SSH。
 
@@ -12,17 +12,17 @@
 当我们手动在服务器上 ping 时，停止流程是这样的：
 
 ```bash
-[admin@server ~]$ ping 223.5.5.5 -O
-PING 223.5.5.5 (223.5.5.5) 56(84) bytes of data.
-64 bytes from 223.5.5.5: icmp_seq=1 ttl=113 time=20.4 ms
-64 bytes from 223.5.5.5: icmp_seq=2 ttl=113 time=20.3 ms
-64 bytes from 223.5.5.5: icmp_seq=3 ttl=113 time=20.3 ms
+[admin@server ~]$ ping 8.8.8.8 -O
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=113 time=20.4 ms
+64 bytes from 8.8.8.8: icmp_seq=2 ttl=113 time=20.3 ms
+64 bytes from 8.8.8.8: icmp_seq=3 ttl=113 time=20.3 ms
 ...
 ^C                                              # 按 Ctrl+C
---- 223.5.5.5 ping statistics ---              # ping 输出统计信息
+--- 8.8.8.8 ping statistics ---                 # ping 输出统计信息
 100 packets transmitted, 95 received, 5% packet loss, time 99050ms
 rtt min/avg/max/mdev = 20.123/20.456/20.789/0.123 ms
-[admin@server ~]$ exit                         # 退出 SSH
+[admin@server ~]$ exit                          # 退出 SSH
 ```
 
 **关键点：**
@@ -71,7 +71,7 @@ class SSHClient:
         time.sleep(0.5)  # 等待 ping 输出统计信息
         while self.channel.recv_ready():
             # 读取并处理统计信息 ✅
-            # --- 223.5.5.5 ping statistics ---
+            # --- x.x.x.x ping statistics ---
             # 100 packets transmitted, 95 received, 5% packet loss
             # ... 通过回调记录到日志中 ...
     
@@ -102,7 +102,7 @@ class SSHClient:
 ```
 用户操作: Ctrl+C
   ↓
-main.py 捕获 KeyboardInterrupt
+main 捕获 KeyboardInterrupt
   ↓
 调用 tester.stop_test()
 ```
@@ -110,7 +110,6 @@ main.py 捕获 KeyboardInterrupt
 ### 2. 停止所有测试
 
 ```python
-# ping_tester.py
 def stop_test(self):
     self.running = False
     
@@ -151,11 +150,11 @@ finally:
 ### 4. 会话日志中的记录
 
 ```
-[2025-11-06 22:59:58.123] 64 bytes from 223.5.5.5: icmp_seq=98 time=20.3 ms
-[2025-11-06 22:59:59.234] 64 bytes from 223.5.5.5: icmp_seq=99 time=20.2 ms
-[2025-11-06 23:00:00.345] 64 bytes from 223.5.5.5: icmp_seq=100 time=20.4 ms
+[2025-11-06 22:59:58.123] 64 bytes from 8.8.8.8: icmp_seq=98 time=20.3 ms
+[2025-11-06 22:59:59.234] 64 bytes from 8.8.8.8: icmp_seq=99 time=20.2 ms
+[2025-11-06 23:00:00.345] 64 bytes from 8.8.8.8: icmp_seq=100 time=20.4 ms
 [2025-11-06 23:00:00.456] ^C                                          ← Ctrl+C
-[2025-11-06 23:00:00.567] --- 223.5.5.5 ping statistics ---          ← 统计信息 ✅
+[2025-11-06 23:00:00.567] --- 8.8.8.8 ping statistics ---             ← 统计信息 ✅
 [2025-11-06 23:00:00.678] 100 packets transmitted, 95 received, 5% packet loss, time 99050ms
 [2025-11-06 23:00:00.789] rtt min/avg/max/mdev = 20.123/20.456/20.789/0.123 ms
 
@@ -205,7 +204,7 @@ while self.channel.recv_ready():
 ping 的统计信息非常有价值：
 
 ```
---- 223.5.5.5 ping statistics ---
+--- 8.8.8.8 ping statistics ---
 100 packets transmitted, 95 received, 5% packet loss, time 99050ms
 rtt min/avg/max/mdev = 20.123/20.456/20.789/0.123 ms
 ```
@@ -228,7 +227,7 @@ rtt min/avg/max/mdev = 20.123/20.456/20.789/0.123 ms
 ```
 用户按 Ctrl+C
     │
-    ├─→ main.py 捕获 KeyboardInterrupt
+    ├─→ main 捕获 KeyboardInterrupt
     │       │
     │       ├─→ tester.stop_test()
     │       │       │
@@ -282,5 +281,13 @@ rtt min/avg/max/mdev = 20.123/20.456/20.789/0.123 ms
 - 获取 ping 的统计信息（丢包率、RTT 等）
 - 会话日志完整可用
 
-感谢用户提出这个重要的改进建议！这使得工具更加专业和可靠。
+## 相关文档
 
+| 文档 | 说明 |
+|------|------|
+| [README](../README.md) | 项目概述 |
+| [使用指南](./USAGE.md) | 详细使用方法 |
+| [配置说明](./CONFIGURATION.md) | 配置文件和参数 |
+| [故障排查](./TROUBLESHOOTING.md) | 常见问题解决 |
+| [项目架构](./PROJECT_STRUCTURE.md) | 代码结构说明 |
+| [更新日志](../CHANGELOG.md) | 版本历史 |

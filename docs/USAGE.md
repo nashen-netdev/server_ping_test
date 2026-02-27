@@ -5,11 +5,12 @@
 ### 1. 准备配置文件
 
 ```bash
-# 直接编辑现有的配置文件
-open config/servers_empty.xlsx  # 用 Excel 打开
+# 复制模板到你的工作目录
+cp examples/servers_template.xlsx ~/work/servers.xlsx
 
-# 或者复制一份新的配置
-cp config/servers_empty.xlsx config/my_servers.xlsx
+# 用 Excel 或 LibreOffice 编辑配置文件
+open ~/work/servers.xlsx  # macOS
+# 或 libreoffice ~/work/servers.xlsx  # Linux
 ```
 
 ### 2. 运行测试
@@ -19,25 +20,25 @@ cp config/servers_empty.xlsx config/my_servers.xlsx
 source .venv/bin/activate
 
 # 运行测试
-python3 main.py -c config/servers_empty.xlsx
+batch-ping ~/work/servers.xlsx
 ```
 
 ## 配置文件示例
 
-### 简单示例（单个目标IP）
+### 简单示例（单个目标 IP）
 
 | ip | user | pass | dip1 | dip2 | dip3 | dip4 |
 |----|------|------|------|------|------|------|
-| 192.168.1.1 | admin | password | 223.5.5.5 | | | |
-| 192.168.1.2 | admin | password | 223.5.5.5 | | | |
+| 10.0.0.1 | admin | ******** | 8.8.8.8 | | | |
+| 10.0.0.2 | admin | ******** | 8.8.8.8 | | | |
 
-### 复杂示例（多个目标IP）
+### 复杂示例（多个目标 IP）
 
 | ip | user | pass | dip1 | dip2 | dip3 | dip4 |
 |----|------|------|------|------|------|------|
-| 192.168.1.1 | test | 123456 | 223.5.5.5 | | | |
-| 192.168.1.5 | admin | pass123 | 223.5.5.5 | | 192.168.2.1 | |
-| 192.168.1.7 | root | secret | 223.5.5.5 | 223.6.6.6 | 192.168.2.1 | |
+| 10.0.0.1 | admin | ******** | 8.8.8.8 | | | |
+| 10.0.0.2 | admin | ******** | 8.8.8.8 | 8.8.4.4 | | |
+| 10.0.0.3 | root | ******** | 8.8.8.8 | 8.8.4.4 | 10.0.1.1 | |
 
 ## 测试流程
 
@@ -61,22 +62,22 @@ python3 main.py -c config/servers_empty.xlsx
 
 ```bash
 # 查看帮助
-python3 main.py --help
+batch-ping --help
 
-# 运行测试
-python3 main.py -c config/servers_empty.xlsx
+# 运行测试（默认 PDF 报告）
+batch-ping servers.xlsx
 
 # 指定输出目录
-python3 main.py -c config/servers_empty.xlsx -o test_results_20251106
+batch-ping servers.xlsx -o test_results
 
-# 后台运行（保存日志）
-nohup python3 main.py -c config/servers_empty.xlsx > test.log 2>&1 &
+# 降低并发数（大量服务器时推荐）
+batch-ping servers.xlsx -n 5 -i 0.5
 
-# 查看进程
-ps aux | grep main.py
+# 生成 TXT 格式报告
+batch-ping servers.xlsx -f txt
 
-# 停止后台进程
-pkill -f main.py
+# 使用 python -m 方式运行
+python -m server_ping_test servers.xlsx
 ```
 
 ## 输出说明
@@ -84,18 +85,19 @@ pkill -f main.py
 ### 实时控制台输出
 
 ```
-✓ 已连接: 192.168.1.1 (xb01-cpu-0001) -> 开始 ping 223.5.5.5
-✓ 已连接: 192.168.1.2 (xb01-cpu-0002) -> 开始 ping 223.5.5.5
-⚠ 丢包检测: 192.168.1.1(xb01-cpu-0001) -> 223.5.5.5: no answer yet for icmp_seq=10
+✓ 已连接: 10.0.0.1 (server-01) -> 开始 ping 8.8.8.8
+✓ 已连接: 10.0.0.2 (server-02) -> 开始 ping 8.8.8.8
+⚠ 丢包检测: 10.0.0.1 (server-01) -> 8.8.8.8: 开始丢包
+✓ 恢复正常: 10.0.0.1 (server-01) -> 8.8.8.8: 共丢失 5 个包后恢复
 ```
 
-- ✓ 表示连接成功
+- ✓ 表示连接成功或恢复正常
 - ✗ 表示连接失败
 - ⚠ 表示检测到丢包
 
-### 测试报告文件
+### 测试报告
 
-位置: `results/ping_test_report_YYYYMMDD_HHMMSS.txt`
+位置: `results/ping_test_report_YYYYMMDD_HHMMSS.pdf`
 
 包含：
 1. 测试统计（总连接数、丢包连接数、达标率）
@@ -104,56 +106,46 @@ pkill -f main.py
 
 ## 使用技巧
 
-### 技巧1: 分批测试
+### 技巧 1: 分批测试
 
 如果服务器很多，可以分批测试：
 
 ```bash
 # 复制配置文件，分别编辑
-cp config/servers_empty.xlsx config/servers_batch1.xlsx
-cp config/servers_empty.xlsx config/servers_batch2.xlsx
+cp servers.xlsx servers_batch1.xlsx
+cp servers.xlsx servers_batch2.xlsx
 
 # 测试第一批
-python3 main.py -c config/servers_batch1.xlsx -o results_batch1
+batch-ping servers_batch1.xlsx -o results_batch1
 
 # 测试第二批
-python3 main.py -c config/servers_batch2.xlsx -o results_batch2
+batch-ping servers_batch2.xlsx -o results_batch2
 ```
 
-### 技巧2: 快速验证配置
+### 技巧 2: 快速验证配置
 
 测试前先用少量服务器验证配置是否正确：
 
 ```bash
-# 复制配置文件，只保留1-2台服务器
-cp config/servers_empty.xlsx config/test_small.xlsx
+# 复制配置文件，只保留 1-2 台服务器
+cp servers.xlsx test_small.xlsx
 # 编辑 test_small.xlsx，只保留几行测试
 
 # 快速测试
-python3 main.py -c config/test_small.xlsx
+batch-ping test_small.xlsx
 ```
 
-### 技巧3: 长时间测试
+### 技巧 3: 长时间测试
 
 对于需要长时间运行的测试：
 
 ```bash
 # 使用 screen 或 tmux
 screen -S ping_test
-./run.sh config/servers.xlsx
+batch-ping servers.xlsx
 
 # 分离会话: Ctrl+A D
 # 重新连接: screen -r ping_test
-```
-
-### 技巧4: 定时报告
-
-需要定时查看报告而不停止测试时，可以手动复制 results 文件：
-
-```bash
-# 在另一个终端查看最新结果
-ls -lt results/
-cat results/ping_test_report_*.txt | head -100
 ```
 
 ## 故障演练场景示例
@@ -162,29 +154,21 @@ cat results/ping_test_report_*.txt | head -100
 
 1. **准备阶段**
    ```bash
-   # 启动测试
    source .venv/bin/activate
-   python3 main.py -c config/production_servers.xlsx
+   batch-ping servers.xlsx
    ```
 
-2. **观察稳定性**
-   - 等待所有连接建立
-   - 确认没有异常丢包
+2. **观察稳定性** - 等待所有连接建立，确认没有异常丢包
 
-3. **执行切换**
-   - 在网络设备上执行路由切换
-   - 观察控制台实时输出
+3. **执行切换** - 在网络设备上执行路由切换，观察控制台实时输出
 
-4. **记录结果**
-   - 记录丢包开始时间
-   - 记录丢包结束时间
-   - 计算切换时长
+4. **记录结果** - 记录丢包开始/结束时间，计算切换时长
 
 5. **生成报告**
    ```bash
    # 按 Ctrl+C 停止
    # 查看报告
-   cat results/ping_test_report_*.txt
+   ls results/ping_test_report_*.pdf
    ```
 
 ## 注意事项
@@ -195,26 +179,13 @@ cat results/ping_test_report_*.txt | head -100
 4. **服务器负载**：ping 对服务器 CPU/内存影响极小
 5. **防火墙**：确保本机能 SSH 连接到目标服务器
 
-## 快速排错
+## 相关文档
 
-| 问题 | 解决方法 |
-|------|---------|
-| 找不到 python3 | `which python3` 确认路径 |
-| 模块导入失败 | `source .venv/bin/activate` |
-| 无法连接服务器 | 检查 IP、用户名、密码 |
-| Excel 读取失败 | 确认文件格式为 .xlsx |
-| 虚拟环境未激活 | `source .venv/bin/activate` |
-
-## 获取帮助
-
-查看完整文档：
-```bash
-cat README.md | less
-```
-
-查看配置文件：
-```bash
-# 用 Excel 或 LibreOffice 打开
-open config/servers_empty.xlsx
-```
-
+| 文档 | 说明 |
+|------|------|
+| [README](../README.md) | 项目概述 |
+| [配置说明](./CONFIGURATION.md) | 配置文件和参数详解 |
+| [故障排查](./TROUBLESHOOTING.md) | 常见问题解决 |
+| [项目架构](./PROJECT_STRUCTURE.md) | 代码结构说明 |
+| [停止机制](./STOP_MECHANISM.md) | 技术实现细节 |
+| [更新日志](../CHANGELOG.md) | 版本历史 |

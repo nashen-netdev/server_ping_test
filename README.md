@@ -2,419 +2,74 @@
 
 用于网络故障演练的批量 ping 测试工具，支持同时在多台服务器上 ping 多个目标 IP，并实时记录所有结果和丢包情况。
 
-## 📚 文档导航
+## 功能亮点
 
-- **[快速使用指南](docs/USAGE.md)** - 详细的使用说明和技巧
-- **[项目架构说明](docs/PROJECT_STRUCTURE.md)** - 代码结构和技术细节
-- **[停止机制说明](docs/STOP_MECHANISM.md)** - Ping 停止原理和实现
-- **[版本历史](CHANGELOG.md)** - 更新日志
+- 从 Excel 配置文件批量读取服务器和目标 IP
+- 并发执行多个服务器的 ping 测试
+- 可配置的并发连接数控制和 SSH 自动重试机制
+- 实时检测和记录丢包情况
+- 自动生成测试报告（PDF 加密保护 / TXT 格式）
+- 支持手动停止测试（Ctrl+C）
 
-## 功能特点
+## 系统要求
 
-- ✅ 支持从 Excel 配置文件批量读取服务器和目标IP
-- ✅ 并发执行多个服务器的 ping 测试
-- ✅ **可配置的并发连接数控制**（避免连接过载）
-- ✅ **SSH 连接自动重试机制**（失败后指数退避重试）
-- ✅ 实时检测和记录丢包情况
-- ✅ 自动生成详细的测试报告（支持 PDF / TXT 格式）
-- ✅ **PDF 报告加密保护**（可查看/打印，禁止修改/复制）
-- ✅ 支持手动停止测试（Ctrl+C）
-- ✅ 记录完整的 ping 输出信息
-- ✅ 统计丢包率和测试时长
+- Python 3.8+
+- 支持 SSH 连接的 Linux 服务器
+- Excel 配置文件（.xlsx 格式）
 
-## 项目结构
-
-采用标准的 **src-layout** 结构：
-
-```
-server_ping_test/
-├── src/                          # 源代码目录（src-layout）
-│   └── server_ping_test/        # 包目录
-│       ├── __init__.py          # 包初始化，导出主要类
-│       ├── __main__.py          # 支持 python -m 运行
-│       ├── cli.py               # 命令行接口
-│       ├── config_loader.py     # 配置加载模块
-│       ├── ssh_client.py        # SSH 客户端模块
-│       ├── session_logger.py    # 会话日志记录模块
-│       ├── ping_tester.py       # Ping 测试核心模块
-│       └── pdf_report.py        # PDF 报告生成模块（加密保护）
-├── examples/                     # 示例目录
-│   └── servers_template.xlsx    # 配置文件模板（可复制使用）
-├── tests/                        # 测试目录
-│   └── __init__.py
-├── docs/                         # 文档目录
-│   ├── USAGE.md                 # 使用指南
-│   ├── PROJECT_STRUCTURE.md     # 架构说明
-│   └── STOP_MECHANISM.md        # 停止机制说明
-├── requirements.txt              # 依赖包列表
-├── pyproject.toml                # 项目配置（Python 标准）
-├── .gitignore
-├── CHANGELOG.md
-└── README.md
-```
-
-## 安装配置
-
-### 1. 创建虚拟环境（推荐）
+## 快速安装
 
 ```bash
-cd /Users/sen/automate/Network_Projects/ethernet/server_ping_test
-python3 -m venv .venv
-source .venv/bin/activate
-```
+# 克隆项目并进入目录
+git clone <repository-url> && cd server_ping_test
 
-### 2. 安装依赖
-
-**方法1：使用 pip（推荐）**
-```bash
+# 创建虚拟环境并安装依赖
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**方法2：开发模式安装（便于修改代码）**
-```bash
-pip install -e .
-```
-
-### 3. 准备配置文件
-
-在 Excel 中打开配置文件，填写服务器信息：
-
-| 列名 | 说明 | 是否必填 |
-|------|------|---------|
-| ip | 服务器IP地址 | ✅ 必填 |
-| user | SSH用户名 | 可选（默认root） |
-| pass | SSH密码 | 可选 |
-| dip1 | 目标IP地址1 | 至少填一个 |
-| dip2 | 目标IP地址2 | 可选 |
-| dip3 | 目标IP地址3 | 可选 |
-| dip4 | 目标IP地址4 | 可选 |
-
-**示例配置：**
-
-| ip | user | pass | dip1 | dip2 | dip3 | dip4 |
-|----|------|------|------|------|------|------|
-| 192.168.1.1 | test | 123456 | 223.5.5.5 | | | |
-| 192.168.1.2 | admin | pass123 | 223.5.5.5 | 223.6.6.6 | | |
-| 192.168.1.5 | root | secret | 223.5.5.5 | | 192.168.2.1 | |
-
-## 使用方法
-
-### 基本用法
+## 基本用法
 
 ```bash
-# 1. 安装工具
-cd /path/to/server_ping_test
-pip install -e .
+# 激活虚拟环境
+source .venv/bin/activate
 
-# 2. 准备配置文件（复制模板到你的工作目录）
-cp examples/servers_template.xlsx ~/work/servers.xlsx
-# 编辑 ~/work/servers.xlsx 填写服务器信息
-
-# 3. 在工作目录运行测试（默认生成 PDF 报告，加密保护不可修改）
-cd ~/work
+# 运行测试（默认生成 PDF 报告）
 batch-ping servers.xlsx
-# 结果保存在: ~/work/results/
 
-# 4. 指定输出目录
-batch-ping servers.xlsx -o /tmp/ping_results
+# 指定输出目录和并发数
+batch-ping servers.xlsx -o results -n 10
 
-# 5. 自定义并发数和间隔
-batch-ping servers.xlsx -n 20 -i 0.5
-
-# 6. 生成传统 TXT 格式报告
+# 生成 TXT 格式报告
 batch-ping servers.xlsx -f txt
 
-# 7. 自定义 PDF 编辑密码
-batch-ping servers.xlsx --pdf-password MySecretPass
-
-# 8. 使用 python -m 方式运行
-python -m server_ping_test servers.xlsx
-
-# 9. 查看帮助
+# 查看帮助
 batch-ping --help
 ```
 
-### 输出说明
+## 文档导航
 
-运行后会在**当前工作目录**（或 `-o` 指定的目录）生成：
+| 文档 | 说明 |
+|------|------|
+| [快速使用指南](docs/USAGE.md) | 详细的使用方法和技巧 |
+| [配置说明](docs/CONFIGURATION.md) | 配置文件格式和参数说明 |
+| [故障排查](docs/TROUBLESHOOTING.md) | 常见问题和解决方案 |
+| [项目架构](docs/PROJECT_STRUCTURE.md) | 代码结构和技术细节 |
+| [停止机制](docs/STOP_MECHANISM.md) | Ping 停止原理和实现 |
+| [更新日志](CHANGELOG.md) | 版本历史和变更记录 |
 
-```
-results/
-├── sessions/                    # 会话日志目录
-│   └── YYYYMMDD_HHMMSS/        # 每次测试的详细日志
-│       ├── server1_to_target1.log
-│       └── server2_to_target2.log
-└── ping_test_report_*.pdf      # 测试报告（默认 PDF 格式，加密保护）
-```
-
-> **PDF 格式说明：** 默认生成的 PDF 报告使用 128 位加密，无需密码即可打开查看和打印，但**禁止修改、复制文本和添加注释**。使用 `-f txt` 可切换为传统纯文本格式。
-
-### 命令行参数
+## 项目结构
 
 ```
-batch-ping CONFIG_FILE [选项]
+server_ping_test/
+├── src/server_ping_test/    # 源代码（src-layout）
+├── examples/                 # 配置文件模板
+├── tests/                    # 测试目录
+├── docs/                     # 详细文档
+├── requirements.txt          # 依赖列表
+└── pyproject.toml           # 项目配置
 ```
-
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `CONFIG_FILE` | 位置参数 | 必填 | 服务器配置文件 (Excel格式) |
-| `-o, --output` | 选项 | `results` | 测试结果输出目录 |
-| `-n, --max-concurrent` | 选项 | 自动计算 | 最大并发 SSH 连接数 |
-| `-i, --interval` | 选项 | `0.3` | 连接发起间隔秒数 |
-| `-f, --format` | 选项 | `pdf` | 报告格式：`pdf`（加密保护）或 `txt`（纯文本） |
-| `--pdf-password` | 选项 | 内置密码 | PDF 所有者密码（控制编辑权限） |
-
-**并发数自动计算逻辑：**
-- 默认根据**任务数量**和**系统资源**动态计算
-- 取以下三者的最小值：
-  1. 总任务数（避免浪费）
-  2. 系统文件描述符限制 / 3（每个 SSH 连接约需 3 个 fd）
-  3. 硬上限 50（避免服务器端拒绝连接）
-- 例如：60 个任务，系统支持 40 个并发 → 实际使用 40 个
-
-### 高级用法示例
-
-```bash
-# 测试大量服务器时，适当降低并发数和增加间隔
-batch-ping servers.xlsx -n 5 -i 0.5
-
-# 网络条件好时，可以增加并发数
-batch-ping servers.xlsx -n 20 -i 0.2
-
-# 完整参数示例
-batch-ping servers.xlsx -o my_results -n 10 -i 0.3
-
-# 生成 PDF 报告并指定编辑密码
-batch-ping servers.xlsx --pdf-password MyAdminPass
-
-# 生成传统 TXT 报告（兼容旧流程）
-batch-ping servers.xlsx -f txt -o my_results
-```
-
-### 停止测试
-
-测试运行过程中，按 `Ctrl+C` 可以随时停止所有测试并生成报告。
-
-## 测试报告说明
-
-### 输出结构
-
-每次测试会生成：
-1. **测试报告**：`results/ping_test_report_YYYYMMDD_HHMMSS.pdf`（默认 PDF 格式）
-2. **会话日志目录**：`results/sessions/YYYYMMDD_HHMMSS/`
-   - 每个连接一个独立的日志文件
-   - 文件名格式：`server_ip_to_target_ip.log`
-
-### PDF 报告安全特性
-
-| 功能 | 状态 | 说明 |
-|------|------|------|
-| 打开查看 | ✅ 无需密码 | 任何 PDF 阅读器直接打开 |
-| 打印 | ✅ 允许 | 可正常打印纸质报告 |
-| 修改内容 | ❌ 禁止 | 需要 owner 密码才能编辑 |
-| 复制文本 | ❌ 禁止 | 防止内容被复制篡改 |
-| 添加注释 | ❌ 禁止 | 防止报告被添加额外标注 |
-| 加密强度 | 128 位 | 标准 PDF 加密 |
-
-> **适用场景：** 报告可以发送到任何地方（邮件、IM、共享盘），接收方无需密码即可查看和打印，但无法修改报告内容，确保测试结果的真实性。
-
-### 报告内容
-
-#### 1. 测试统计
-- 总连接数
-- 无丢包连接数量和比例（绿色高亮）
-- 有丢包连接数量和比例（红色高亮）
-
-#### 2. 丢包情况摘要
-如果检测到丢包，会单独列出：
-- 服务器信息（IP + 主机名）
-- 目标IP
-- 总包数、丢包数、丢包率
-- 测试时长
-- 详细的丢包时间记录
-
-#### 3. 详细测试结果
-每个测试连接的完整信息：
-- 服务器和目标IP信息
-- 开始/结束时间
-- 会话日志文件路径
-- Ping 输出摘要（最近 50 行）
-
-## 实时监控
-
-程序运行时会在控制台实时显示：
-- 连接状态（✓ 已连接 / ✗ 连接失败）
-- 丢包告警（⚠ 丢包检测）- 智能显示，避免刷屏
-- 恢复提示（✓ 恢复正常）
-
-示例输出：
-```
-✓ 已连接: 192.168.1.1 (xb01-cpu-0001) -> 开始 ping 223.5.5.5
-✓ 已连接: 192.168.1.2 (xb01-cpu-0002) -> 开始 ping 223.5.5.5
-⚠ 丢包检测: 192.168.1.1(xb01-cpu-0001) -> 223.5.5.5: 开始丢包
-⚠ 丢包检测: 192.168.1.1(xb01-cpu-0001) -> 223.5.5.5: 已连续丢包 10 个
-⚠ 丢包检测: 192.168.1.1(xb01-cpu-0001) -> 223.5.5.5: 已连续丢包 20 个
-✓ 恢复正常: 192.168.1.1(xb01-cpu-0001) -> 223.5.5.5: 共丢失 23 个包后恢复
-```
-
-**智能显示说明：**
-- 首次丢包时显示"开始丢包"
-- 每连续丢10个包显示一次计数（避免刷屏）
-- 恢复正常时显示总丢包数
-- 所有详细信息都记录在报告中
-
-## 使用场景
-
-### 场景1: 网络故障演练
-1. 准备测试服务器配置文件
-2. 启动批量 ping 测试
-3. 执行网络切换操作
-4. 观察实时丢包情况
-5. 停止测试并查看报告
-
-### 场景2: 大规模测试
-支持同时测试 50台、100台甚至更多设备：
-- 每台服务器可以 ping 最多4个目标IP
-- 所有测试并发执行
-- 自动管理 SSH 连接
-
-### 场景3: 持续监控
-- 测试会一直运行直到手动停止
-- 实时显示丢包情况
-- 适合长时间的网络稳定性测试
-
-## 技术特点
-
-### 并发处理
-- 使用多线程实现并发测试
-- 每个服务器的每个目标IP独立线程
-- 自动管理线程生命周期
-
-### 可靠性
-- SSH 连接异常自动处理
-- 优雅关闭所有连接
-- 线程安全的结果记录
-
-### 可扩展性
-- 模块化设计，便于扩展
-- 支持自定义输出格式
-- 预留日志和测试用例目录
-
-## 故障排查
-
-### 问题1: 无法连接服务器
-**现象：** `✗ 无法连接到服务器 192.168.1.x`
-
-**排查思路：**
-1. 检查服务器IP是否可达（本地 ping 测试）
-2. 确认SSH端口（默认22）是否开放
-3. 验证用户名和密码是否正确
-4. 检查防火墙设置
-5. 查看服务器 SSH 服务状态
-
-### 问题2: 大量 "No existing session" 或 "Error reading SSH protocol banner" 错误
-**现象：** 同时测试多台服务器时，大量连接失败
-
-**原因分析：**
-- 同时发起的 SSH 连接数超过了网络或服务器的限制
-- SSH 服务器的 `MaxStartups` 参数限制了并发连接数
-- 网络设备（防火墙/负载均衡器）有连接速率限制
-
-**解决方案：**
-```bash
-# 降低并发连接数（默认自动计算，可改为 5）
-batch-ping servers.xlsx -n 5
-
-# 增加连接间隔（默认 0.3 秒，可改为 0.5 秒）
-batch-ping servers.xlsx -i 0.5
-
-# 同时调整两个参数
-batch-ping servers.xlsx -n 5 -i 0.5
-```
-
-**服务器端优化：**（如有权限）
-```bash
-# 修改 /etc/ssh/sshd_config
-MaxStartups 30:50:100  # 提高并发连接限制
-```
-
-### 问题3: 依赖安装失败
-**现象：** pip install 报错
-
-**排查思路：**
-1. 确认 Python 版本（需要 3.8+）
-2. 更新 pip: `pip install --upgrade pip`
-3. 使用国内镜像源: `pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt`
-4. 检查网络连接
-
-### 问题4: Excel 文件读取失败
-**现象：** 配置文件加载错误
-
-**排查思路：**
-1. 确认文件路径正确
-2. 检查 Excel 文件格式（.xlsx）
-3. 验证必需列是否存在
-4. 确保至少有一行有效数据
-5. 检查数据格式（IP地址格式等）
-
-### 问题5: 虚拟环境问题
-**现象：** 找不到模块
-
-**解决方案：**
-```bash
-# 确保虚拟环境已激活
-source .venv/bin/activate
-
-# 确认 Python 路径
-which python3
-
-# 重新安装依赖
-pip install -r requirements.txt
-```
-
-## 依赖说明
-
-- **paramiko**: SSH 连接库，用于远程执行命令
-- **pandas**: 数据处理库，用于读取 Excel 配置
-- **openpyxl**: Excel 文件处理引擎
-- **reportlab**: PDF 生成库，支持加密和权限控制（中文 CID 字体内置）
-- **python-dateutil**: 日期时间处理工具
-
-## 性能说明
-
-- 单个 ping 测试占用资源很小
-- 100台设备同时测试内存占用约 200-500MB
-- SSH 连接建立时间约 0.5-2 秒/台
-- **并发连接数根据任务数和系统资源自动计算**，上限 50
-- **SSH 连接失败自动重试 3 次**，使用指数退避（2s, 4s）
-- 可通过 `-n` 参数手动指定并发数量
-
-## 注意事项
-
-1. ⚠️ **密码安全**：配置文件包含明文密码，请妥善保管
-2. ⚠️ **SSH 密钥**：首次连接会自动接受主机密钥
-3. ⚠️ **资源占用**：大规模测试注意本机资源
-4. ⚠️ **网络限制**：注意服务器端防火墙和连接数限制
-
-## 后续优化建议
-
-- [ ] 支持 SSH 密钥认证
-- [ ] 添加 Web 界面实时监控
-- [ ] 支持自定义 ping 参数
-- [ ] 导出 JSON/CSV 格式报告
-- [ ] 添加邮件/企业微信告警
-- [ ] 支持配置文件加密
-- [x] PDF 加密报告输出（已完成 v1.2.0）
-
-## 版本信息
-
-- 版本: 1.2.0
-- Python: 3.8+
-- 架构: src-layout
-- 作者: sen
-- 更新日期: 2026-02-09
 
 ## 许可证
 
-内部工具，仅供网络运维团队使用。
-
+MIT License - 详见 [LICENSE](LICENSE) 文件

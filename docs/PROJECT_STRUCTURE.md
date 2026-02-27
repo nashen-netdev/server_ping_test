@@ -2,41 +2,55 @@
 
 ## 目录结构
 
+采用标准的 **src-layout** 结构：
+
 ```
 server_ping_test/
+├── src/                          # 源代码目录（src-layout）
+│   └── server_ping_test/        # 包目录
+│       ├── __init__.py          # 包初始化，导出主要类
+│       ├── __main__.py          # 支持 python -m 运行
+│       ├── cli.py               # 命令行接口
+│       ├── config_loader.py     # 配置加载模块
+│       ├── ssh_client.py        # SSH 客户端模块
+│       ├── session_logger.py    # 会话日志记录模块
+│       ├── ping_tester.py       # Ping 测试核心模块
+│       └── pdf_report.py        # PDF 报告生成模块
 │
-├── src/                          # 源代码目录
-│   ├── __init__.py              # 包初始化文件
-│   ├── config_loader.py         # 配置加载模块 - 从 Excel 读取服务器配置
-│   ├── ssh_client.py            # SSH 客户端模块 - 管理远程连接和命令执行
-│   └── ping_tester.py           # Ping 测试核心模块 - 多线程测试管理和结果记录
+├── examples/                     # 示例目录
+│   └── servers_template.xlsx    # 配置文件模板
 │
-├── config/                       # 配置文件目录
-│   └── servers_empty.xlsx       # 配置文件（直接编辑使用）
-│
-├── results/                      # 测试结果输出目录（运行时自动创建）
-│   └── ping_test_report_*.txt   # 测试报告文件
-│
-├── logs/                         # 日志目录（预留）
-├── tests/                        # 测试用例目录（预留）
+├── tests/                        # 测试目录
 │   └── __init__.py
 │
-├── .venv/                        # Python 虚拟环境
+├── docs/                         # 文档目录
+│   ├── USAGE.md                 # 使用指南
+│   ├── CONFIGURATION.md         # 配置说明
+│   ├── TROUBLESHOOTING.md       # 故障排查
+│   ├── PROJECT_STRUCTURE.md     # 本文件
+│   └── STOP_MECHANISM.md        # 停止机制说明
 │
-├── main.py                       # 主程序入口
+├── results/                      # 测试结果（运行时生成）
+│   ├── sessions/                # 会话日志
+│   └── ping_test_report_*.pdf   # 测试报告
 │
-├── requirements.txt              # Python 依赖包列表
-├── README.md                     # 项目完整文档
-├── USAGE.md                      # 快速使用指南
-├── PROJECT_STRUCTURE.md          # 本文件 - 架构说明
-│
-└── .gitignore                    # Git 忽略文件配置
-
+├── requirements.txt              # 依赖包列表
+├── pyproject.toml                # 项目配置（Python 标准）
+├── README.md                     # 项目概述
+├── CHANGELOG.md                  # 版本历史
+├── LICENSE                       # 许可证
+└── .gitignore                    # Git 忽略配置
 ```
 
 ## 模块说明
 
-### 1. config_loader.py - 配置加载模块
+### 1. cli.py - 命令行接口
+
+**职责：** 解析命令行参数，协调各模块工作
+
+**入口点：** `batch-ping` 命令（通过 pyproject.toml 配置）
+
+### 2. config_loader.py - 配置加载模块
 
 **职责：** 从 Excel 文件读取和验证服务器配置
 
@@ -47,11 +61,7 @@ server_ping_test/
 - `load_config()`: 从 Excel 加载配置，返回服务器列表
 - `validate_config()`: 验证配置有效性
 
-**输入：** Excel 配置文件（包含 ip, user, pass, dip1-4 列）
-
-**输出：** 结构化的服务器配置列表
-
-### 2. ssh_client.py - SSH 客户端模块
+### 3. ssh_client.py - SSH 客户端模块
 
 **职责：** 管理 SSH 连接和远程命令执行
 
@@ -68,9 +78,10 @@ server_ping_test/
 **特点：**
 - 自动处理 SSH 密钥策略
 - 支持实时输出回调
+- 连接失败自动重试（指数退避）
 - 优雅的连接关闭
 
-### 3. ping_tester.py - Ping 测试核心模块
+### 4. ping_tester.py - Ping 测试核心模块
 
 **职责：** 管理多个服务器的并发测试和结果记录
 
@@ -88,21 +99,24 @@ server_ping_test/
 - 实时丢包告警
 - 生成详细测试报告
 
-**主要方法：**
-- `start_test()`: 启动所有测试任务
-- `stop_test()`: 停止所有测试
-- `generate_report()`: 生成测试报告
+### 5. session_logger.py - 会话日志模块
 
-### 4. main.py - 主程序入口
-
-**职责：** 命令行接口和流程控制
+**职责：** 管理每个连接的独立日志文件
 
 **功能：**
-- 解析命令行参数
-- 加载和验证配置
-- 启动测试流程
-- 处理用户中断（Ctrl+C）
-- 生成最终报告
+- 为每个 SSH 连接创建独立日志
+- 记录完整的 ping 输出
+- 包含开始/结束时间戳
+
+### 6. pdf_report.py - PDF 报告生成模块
+
+**职责：** 生成加密的 PDF 测试报告
+
+**功能：**
+- 专业的页面布局（页眉、页脚、页码）
+- 表格和颜色高亮
+- 128 位 PDF 加密（禁止修改/复制）
+- 中文字体支持
 
 ## 数据流
 
@@ -147,7 +161,7 @@ server_ping_test/
             │
             ↓
    ┌────────────────┐
-   │  测试报告文件   │
+   │  PDF/TXT 报告   │
    └────────────────┘
 ```
 
@@ -185,10 +199,9 @@ server_ping_test/
 - `timeout` - 超时提示
 
 ### 4. 报告生成
-三层结构：
-1. 测试统计摘要
-2. 丢包情况汇总（突出显示）
-3. 详细测试记录（完整输出）
+两种格式：
+- **PDF**（默认）：专业排版，加密保护
+- **TXT**：纯文本，兼容旧流程
 
 ## 扩展点
 
@@ -205,54 +218,16 @@ server_ping_test/
 - 自定义脚本执行
 
 ### 3. 多种报告格式
-扩展 `PingTester.generate_report()` 支持：
+扩展报告生成支持：
 - JSON 格式
 - CSV 格式
 - HTML 可视化报告
-- 实时 Web 监控
 
 ### 4. 告警功能
 添加告警模块：
 - 邮件通知
 - 企业微信/钉钉通知
 - 自定义 Webhook
-
-## 性能优化建议
-
-### 1. 连接池
-对于大规模测试，可以实现 SSH 连接池：
-- 复用连接降低建立开销
-- 控制最大并发连接数
-- 连接健康检查
-
-### 2. 异步 I/O
-使用 `asyncio` + `asyncssh` 替代多线程：
-- 更高的并发能力
-- 更低的资源占用
-- 更好的可扩展性
-
-### 3. 结果缓冲
-对于长时间测试：
-- 定期刷新结果到磁盘
-- 避免内存占用过大
-- 支持断点续传
-
-## 测试建议
-
-### 单元测试
-- `ConfigLoader`: 测试各种配置文件格式
-- `SSHClient`: 测试连接异常处理
-- `PingResult`: 测试丢包检测逻辑
-
-### 集成测试
-- 端到端测试完整流程
-- 模拟网络故障场景
-- 压力测试（大量并发）
-
-### 性能测试
-- 测试不同规模下的资源占用
-- 测试长时间运行稳定性
-- 测试并发连接上限
 
 ## 安全考虑
 
@@ -271,3 +246,13 @@ server_ping_test/
 - 防止命令注入
 - 配置文件完整性检查
 
+## 相关文档
+
+| 文档 | 说明 |
+|------|------|
+| [README](../README.md) | 项目概述 |
+| [使用指南](./USAGE.md) | 详细使用方法 |
+| [配置说明](./CONFIGURATION.md) | 配置文件和参数 |
+| [故障排查](./TROUBLESHOOTING.md) | 常见问题解决 |
+| [停止机制](./STOP_MECHANISM.md) | 技术实现细节 |
+| [更新日志](../CHANGELOG.md) | 版本历史 |

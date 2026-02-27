@@ -3,16 +3,16 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "batch-ping-tester"
+name = "ping-mesh"
 version = "1.2.0"
-description = "批量 Ping 测试工具 - 用于网络故障演练的多服务器并发 ping 测试"
+description = "Ping Mesh - 网格化网络可达性测试工具，用于网络故障演练的多服务器并发 ping 测试"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
     {name = "Sen", email = "sen@example.com"}
 ]
-keywords = ["ping", "network", "testing", "batch", "ssh", "monitoring"]
+keywords = ["ping", "network", "testing", "mesh", "ssh", "monitoring", "reachability"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: System Administrators",
@@ -42,12 +42,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/batch-ping-tester"
-Repository = "https://github.com/yourusername/batch-ping-tester.git"
-Documentation = "https://github.com/yourusername/batch-ping-tester#readme"
+Homepage = "https://github.com/yourusername/ping-mesh"
+Repository = "https://github.com/yourusername/ping-mesh.git"
+Documentation = "https://github.com/yourusername/ping-mesh#readme"
 
 [project.scripts]
-batch-ping = "server_ping_test.cli:main"
+ping-mesh = "server_ping_test.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

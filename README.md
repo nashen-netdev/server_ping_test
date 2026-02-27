@@ -1,6 +1,6 @@
-# 批量 Ping 测试工具
+# Ping Mesh
 
-用于网络故障演练的批量 ping 测试工具，支持同时在多台服务器上 ping 多个目标 IP，并实时记录所有结果和丢包情况。
+网格化网络可达性测试工具，用于网络故障演练场景。支持同时在多台服务器上 ping 多个目标 IP，并实时记录所有结果和丢包情况。
 
 ## 功能亮点
 
@@ -35,16 +35,16 @@ pip install -r requirements.txt
 source .venv/bin/activate
 
 # 运行测试（默认生成 PDF 报告）
-batch-ping servers.xlsx
+ping-mesh servers.xlsx
 
 # 指定输出目录和并发数
-batch-ping servers.xlsx -o results -n 10
+ping-mesh servers.xlsx -o results -n 10
 
 # 生成 TXT 格式报告
-batch-ping servers.xlsx -f txt
+ping-mesh servers.xlsx -f txt
 
 # 查看帮助
-batch-ping --help
+ping-mesh --help
 ```
 
 ## 文档导航

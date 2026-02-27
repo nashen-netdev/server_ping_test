@@ -20,7 +20,7 @@ open ~/work/servers.xlsx  # macOS
 source .venv/bin/activate
 
 # 运行测试
-batch-ping ~/work/servers.xlsx
+ping-mesh ~/work/servers.xlsx
 ```
 
 ## 配置文件示例
@@ -62,19 +62,19 @@ batch-ping ~/work/servers.xlsx
 
 ```bash
 # 查看帮助
-batch-ping --help
+ping-mesh --help
 
 # 运行测试（默认 PDF 报告）
-batch-ping servers.xlsx
+ping-mesh servers.xlsx
 
 # 指定输出目录
-batch-ping servers.xlsx -o test_results
+ping-mesh servers.xlsx -o test_results
 
 # 降低并发数（大量服务器时推荐）
-batch-ping servers.xlsx -n 5 -i 0.5
+ping-mesh servers.xlsx -n 5 -i 0.5
 
 # 生成 TXT 格式报告
-batch-ping servers.xlsx -f txt
+ping-mesh servers.xlsx -f txt
 
 # 使用 python -m 方式运行
 python -m server_ping_test servers.xlsx
@@ -116,10 +116,10 @@ cp servers.xlsx servers_batch1.xlsx
 cp servers.xlsx servers_batch2.xlsx
 
 # 测试第一批
-batch-ping servers_batch1.xlsx -o results_batch1
+ping-mesh servers_batch1.xlsx -o results_batch1
 
 # 测试第二批
-batch-ping servers_batch2.xlsx -o results_batch2
+ping-mesh servers_batch2.xlsx -o results_batch2
 ```
 
 ### 技巧 2: 快速验证配置
@@ -132,7 +132,7 @@ cp servers.xlsx test_small.xlsx
 # 编辑 test_small.xlsx，只保留几行测试
 
 # 快速测试
-batch-ping test_small.xlsx
+ping-mesh test_small.xlsx
 ```
 
 ### 技巧 3: 长时间测试
@@ -142,7 +142,7 @@ batch-ping test_small.xlsx
 ```bash
 # 使用 screen 或 tmux
 screen -S ping_test
-batch-ping servers.xlsx
+ping-mesh servers.xlsx
 
 # 分离会话: Ctrl+A D
 # 重新连接: screen -r ping_test
@@ -155,7 +155,7 @@ batch-ping servers.xlsx
 1. **准备阶段**
    ```bash
    source .venv/bin/activate
-   batch-ping servers.xlsx
+   ping-mesh servers.xlsx
    ```
 
 2. **观察稳定性** - 等待所有连接建立，确认没有异常丢包

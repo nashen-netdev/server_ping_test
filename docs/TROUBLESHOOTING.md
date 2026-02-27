@@ -26,13 +26,13 @@
 
 ```bash
 # 降低并发连接数
-batch-ping servers.xlsx -n 5
+ping-mesh servers.xlsx -n 5
 
 # 增加连接间隔
-batch-ping servers.xlsx -i 0.5
+ping-mesh servers.xlsx -i 0.5
 
 # 同时调整两个参数
-batch-ping servers.xlsx -n 5 -i 0.5
+ping-mesh servers.xlsx -n 5 -i 0.5
 ```
 
 **服务器端优化（如有权限）：**
@@ -110,7 +110,7 @@ pip install -e .
 
 2. 尝试使用 TXT 格式
    ```bash
-   batch-ping servers.xlsx -f txt
+   ping-mesh servers.xlsx -f txt
    ```
 
 3. 检查输出目录是否有写入权限

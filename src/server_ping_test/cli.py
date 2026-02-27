@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 命令行接口模块
-提供 batch-ping 命令入口
+提供 ping-mesh 命令入口
 """
 
 import sys
@@ -61,15 +61,15 @@ def main():
     global _tester
     
     parser = argparse.ArgumentParser(
-        description='批量 Ping 测试工具 - 用于网络故障演练',
+        description='Ping Mesh - 网格化网络可达性测试工具',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  batch-ping servers.xlsx                       # 默认生成 PDF 报告（加密保护）
-  batch-ping servers.xlsx -f txt                # 生成传统 TXT 报告
-  batch-ping servers.xlsx -o /tmp/output        # 指定输出目录
-  batch-ping servers.xlsx -n 20 -i 0.5          # 自定义并发和间隔
-  batch-ping servers.xlsx --pdf-password MyPass  # 自定义 PDF 编辑密码
+  ping-mesh servers.xlsx                       # 默认生成 PDF 报告（加密保护）
+  ping-mesh servers.xlsx -f txt                # 生成传统 TXT 报告
+  ping-mesh servers.xlsx -o /tmp/output        # 指定输出目录
+  ping-mesh servers.xlsx -n 20 -i 0.5          # 自定义并发和间隔
+  ping-mesh servers.xlsx --pdf-password MyPass # 自定义 PDF 编辑密码
   python -m server_ping_test servers.xlsx
   
 配置文件格式 (Excel):

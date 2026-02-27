@@ -48,7 +48,7 @@ server_ping_test/
 
 **职责：** 解析命令行参数，协调各模块工作
 
-**入口点：** `batch-ping` 命令（通过 pyproject.toml 配置）
+**入口点：** `ping-mesh` 命令（通过 pyproject.toml 配置）
 
 ### 2. config_loader.py - 配置加载模块
 

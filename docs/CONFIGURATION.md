@@ -27,7 +27,7 @@
 ## 命令行参数
 
 ```
-batch-ping CONFIG_FILE [选项]
+ping-mesh CONFIG_FILE [选项]
 ```
 
 | 参数 | 类型 | 默认值 | 说明 |
@@ -74,16 +74,16 @@ results/
 
 ```bash
 # 测试大量服务器时，适当降低并发数和增加间隔
-batch-ping servers.xlsx -n 5 -i 0.5
+ping-mesh servers.xlsx -n 5 -i 0.5
 
 # 网络条件好时，可以增加并发数
-batch-ping servers.xlsx -n 20 -i 0.2
+ping-mesh servers.xlsx -n 20 -i 0.2
 
 # 生成 PDF 报告并指定编辑密码
-batch-ping servers.xlsx --pdf-password YourSecretPass
+ping-mesh servers.xlsx --pdf-password YourSecretPass
 
 # 生成传统 TXT 报告
-batch-ping servers.xlsx -f txt -o my_results
+ping-mesh servers.xlsx -f txt -o my_results
 ```
 
 ## 相关文档
